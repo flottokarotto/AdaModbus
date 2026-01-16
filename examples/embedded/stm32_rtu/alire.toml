@@ -1,0 +1,14 @@
+name = "stm32_rtu"
+description = "STM32 Modbus RTU Master/Slave examples for QEMU"
+version = "1.0.0"
+
+authors = [""]
+licenses = "MIT"
+
+project-files = ["stm32_rtu.gpr"]
+
+[build-switches]
+"*".style_checks = "No"
+
+[[depends-on]]
+gnat_arm_elf = ">=14"

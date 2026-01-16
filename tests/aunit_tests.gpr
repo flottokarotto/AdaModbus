@@ -1,0 +1,49 @@
+with "aunit";
+
+project Aunit_Tests is
+
+   --  Include library sources directly for unit testing
+   --  (bypasses SAL interface restrictions)
+   for Source_Dirs use ("unit", "../src/core", "../src/transport");
+   for Object_Dir use "../obj/tests";
+   for Exec_Dir use "../bin";
+   for Main use ("test_runner.adb");
+
+   type Coverage_Mode is ("disabled", "enabled");
+   Coverage : Coverage_Mode := external ("COVERAGE", "disabled");
+
+   package Compiler is
+      --  Common switches:
+      --    -gnat2022  : Ada 2022 language standard
+      --    -gnatwa    : Enable all common warnings
+      --    -gnatw.X   : Disable warnings for No_Exception_Propagation
+      --    -g         : Generate debug information
+      --    -O0        : No optimization (better debugging)
+      --    -gnata     : Enable assertions and contracts
+      --    -gnatw_A   : Disable anonymous access type allocator warnings (AUnit pattern)
+      Common_Switches := ("-gnat2022", "-gnatwa", "-gnatw.X", "-gnatw_A", "-g", "-O0", "-gnata");
+
+      case Coverage is
+         when "disabled" =>
+            for Default_Switches ("Ada") use Common_Switches;
+         when "enabled" =>
+            --  Add gcov flags for coverage
+            for Default_Switches ("Ada") use Common_Switches &
+              ("-fprofile-arcs", "-ftest-coverage");
+      end case;
+   end Compiler;
+
+   package Binder is
+      for Default_Switches ("Ada") use ("-E");
+   end Binder;
+
+   package Linker is
+      case Coverage is
+         when "disabled" =>
+            null;
+         when "enabled" =>
+            for Default_Switches ("Ada") use ("-fprofile-arcs");
+      end case;
+   end Linker;
+
+end Aunit_Tests;

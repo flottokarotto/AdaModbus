@@ -1,0 +1,111 @@
+--  Embedded Example - GPR Project for Cortex-M + LwIP
+--
+--  Build ohne Netzwerk (QEMU Loopback-Test):
+--    gprbuild -P embedded_example.gpr
+--
+--  Build mit LwIP (als Submodul):
+--    git submodule update --init
+--    gprbuild -P embedded_example.gpr -XLWIP=enabled
+--
+--  Requirements:
+--    - GNAT ARM ELF cross-compiler (alr toolchain --select gnat_arm_elf)
+--    - LwIP submodule (git submodule update --init)
+--
+--  NOTE: Default target is lm3s6965evb for QEMU CI testing.
+--  QEMU's netduinoplus2 (STM32F4) does not support ARM semihosting,
+--  so we use lm3s6965evb which has full semihosting support.
+
+project Embedded_Example is
+
+   type LwIP_Mode is ("disabled", "enabled");
+   type Target_Type is ("lm3s6965evb", "stm32f4");
+
+   LwIP   : LwIP_Mode   := external ("LWIP", "disabled");
+   Target : Target_Type := external ("TARGET", "lm3s6965evb");
+
+   case LwIP is
+      when "disabled" =>
+         for Source_Dirs use (".", "../../../src/core", "../../../src/transport");
+         for Main use ("main_loopback.adb");
+         for Excluded_Source_Files use
+           ("main_slave.adb", "main_master.adb",
+            "modbus_tcp_slave.ads", "modbus_tcp_slave.adb",
+            "modbus_tcp_master.ads", "modbus_tcp_master.adb",
+            "lwip_bindings.ads", "lwip_bindings.adb",
+            "ada_modbus-transport-lwip.ads", "ada_modbus-transport-lwip.adb");
+
+      when "enabled" =>
+         for Source_Dirs use
+           (".", "../../../src/core", "../../../src/transport",
+            "lwip/src/core",
+            "lwip/src/core/ipv4",
+            "lwip/src/api",
+            "lwip/src/include",
+            "lwip_port",
+            "lwip_port/include");
+         for Main use ("main_slave.adb", "main_master.adb", "main_loopback.adb");
+   end case;
+
+   for Object_Dir use "obj/" & Target;
+   for Exec_Dir use "bin";
+
+   for Target use "arm-eabi";
+
+   case LwIP is
+      when "disabled" =>
+         for Languages use ("Ada");
+      when "enabled" =>
+         for Languages use ("Ada", "C");
+   end case;
+
+   case Target is
+      when "lm3s6965evb" =>
+         for Runtime ("Ada") use "light-lm3s";
+      when "stm32f4" =>
+         for Runtime ("Ada") use "light-stm32f4";
+   end case;
+
+   package Compiler is
+      Ada_Switches :=
+        ("-gnat2022",
+         "-gnatwa",
+         "-gnatw.X",
+         "-g",
+         "-O2",
+         "-ffunction-sections",
+         "-fdata-sections");
+
+      for Default_Switches ("Ada") use Ada_Switches;
+
+      case Target is
+         when "lm3s6965evb" =>
+            for Default_Switches ("C") use
+              ("-g", "-O2", "-Wall",
+               "-ffunction-sections", "-fdata-sections",
+               "-DLWIP_PROVIDE_ERRNO",
+               "-I" & Project'Project_Dir & "/lwip/src/include",
+               "-I" & Project'Project_Dir & "/lwip_port/include",
+               "-mcpu=cortex-m3", "-mthumb");
+         when "stm32f4" =>
+            for Default_Switches ("C") use
+              ("-g", "-O2", "-Wall",
+               "-ffunction-sections", "-fdata-sections",
+               "-DLWIP_PROVIDE_ERRNO",
+               "-I" & Project'Project_Dir & "/lwip/src/include",
+               "-I" & Project'Project_Dir & "/lwip_port/include",
+               "-mcpu=cortex-m4", "-mthumb", "-mfpu=fpv4-sp-d16", "-mfloat-abi=hard");
+      end case;
+   end Compiler;
+
+   package Linker is
+      for Default_Switches ("Ada") use
+        ("-Wl,--gc-sections",
+         "-Wl,--print-memory-usage",
+         "-Wl,--defsym=__stack_size=8192");  --  8KB stack (default is 2KB)
+   end Linker;
+
+   package Builder is
+      for Executable_Suffix use ".elf";
+   end Builder;
+
+end Embedded_Example;

@@ -1,0 +1,27 @@
+--  GPRbuild project for C examples
+--  Builds C programs that use the AdaModbus Ada library
+
+with "../../adamodbus.gpr";
+
+project C_Examples is
+
+   for Languages use ("C");
+   for Source_Dirs use (".", "../../src/c_api");
+   for Object_Dir use "../../obj/c_examples";
+   for Exec_Dir use "../../bin";
+
+   for Main use ("c_tcp_master.c", "c_tcp_slave.c");
+
+   package Compiler is
+      for Default_Switches ("C") use
+        ("-Wall", "-Wextra", "-Wpedantic",
+         "-g", "-O0",
+         "-std=c11");
+   end Compiler;
+
+   package Linker is
+      --  Link against Windows sockets library
+      for Default_Switches ("C") use ("-lws2_32");
+   end Linker;
+
+end C_Examples;

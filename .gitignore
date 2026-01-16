@@ -1,0 +1,30 @@
+# Ada/GPRbuild build artifacts
+obj/
+lib/
+bin/
+*.o
+*.ali
+*.exe
+
+# Alire
+alire/
+config/
+
+# GPRbuild
+*.bexch
+*.lexch
+*.cgpr
+
+# gnatcov
+*.srctrace
+*.xcov
+
+# IDE
+.vscode/
+*.swp
+*~
+
+# Claude Code
+.claude/
+CLAUDE.md
+CLAUDE.md

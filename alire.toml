@@ -1,0 +1,27 @@
+name = "adamodbus"
+description = "Ada 2022 Modbus library for embedded and desktop systems"
+version = "1.0.0"
+licenses = "MIT"
+authors = ["Author <author@example.com>"]
+maintainers = ["Maintainer <maintainer@example.com>"]
+maintainers-logins = ["maintainer"]
+
+tags = ["modbus", "embedded", "protocol", "serial", "tcp"]
+
+[gpr-externals]
+ADAMODBUS_BUILD_MODE = ["debug", "release"]
+
+[gpr-set-externals]
+ADAMODBUS_BUILD_MODE = "debug"
+
+[[depends-on]]
+gnat = ">=12"
+
+# Note: aunit is not an Alire dependency because it's not reliably available
+# on all platforms in the Alire index. For testing, clone it from GitHub:
+#   git clone --branch v26.0.0 https://github.com/AdaCore/aunit.git aunit
+#   export GPR_PROJECT_PATH="$PWD/aunit/lib/gnat:$GPR_PROJECT_PATH"
+
+# gnatprove for SPARK verification (optional, only needed for formal verification)
+[[depends-on]]
+gnatprove = "^15"

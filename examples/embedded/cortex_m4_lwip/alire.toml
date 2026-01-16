@@ -1,0 +1,14 @@
+name = "embedded_example"
+description = "Embedded Modbus example for Cortex-M with LwIP"
+version = "1.0.0"
+
+authors = [""]
+licenses = "MIT"
+
+project-files = ["embedded_example.gpr"]
+
+[build-switches]
+"*".style_checks = "No"
+
+[[depends-on]]
+gnat_arm_elf = ">=14"

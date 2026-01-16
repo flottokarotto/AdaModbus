@@ -1,0 +1,71 @@
+--  STM32_RTU - GPR Project for STM32 Modbus RTU Examples
+--
+--  Build slave:
+--    gprbuild -P stm32_rtu.gpr -XMAIN=slave
+--
+--  Build master:
+--    gprbuild -P stm32_rtu.gpr -XMAIN=master
+--
+--  Requirements:
+--    - GNAT ARM ELF cross-compiler (alr toolchain --select gnat_arm_elf)
+--
+--  NOTE: Default target is lm3s6965evb for QEMU CI testing.
+--  QEMU's netduinoplus2 (STM32F4) does not support ARM semihosting,
+--  so we use lm3s6965evb which has full semihosting support.
+
+project STM32_RTU is
+
+   type Main_Type is ("slave", "master");
+   type Target_Type is ("lm3s6965evb", "stm32f4");
+
+   Main_Select : Main_Type   := external ("MAIN", "slave");
+   Target      : Target_Type := external ("TARGET", "lm3s6965evb");
+
+   for Source_Dirs use (".", "../../../src/core");
+   for Object_Dir use "obj/" & Main_Select & "/" & Target;
+   for Exec_Dir use "bin";
+
+   case Main_Select is
+      when "slave" =>
+         for Main use ("main_slave.adb");
+         for Excluded_Source_Files use
+           ("main_master.adb", "rtu_master.ads", "rtu_master.adb");
+      when "master" =>
+         for Main use ("main_master.adb");
+         for Excluded_Source_Files use
+           ("main_slave.adb", "rtu_slave.ads", "rtu_slave.adb");
+   end case;
+
+   for Target use "arm-eabi";
+   for Languages use ("Ada");
+
+   case Target is
+      when "lm3s6965evb" =>
+         for Runtime ("Ada") use "light-lm3s";
+      when "stm32f4" =>
+         for Runtime ("Ada") use "light-stm32f4";
+   end case;
+
+   package Compiler is
+      for Default_Switches ("Ada") use
+        ("-gnat2022",
+         "-gnatwa",
+         "-gnatw.X",
+         "-g",
+         "-O2",
+         "-ffunction-sections",
+         "-fdata-sections");
+   end Compiler;
+
+   package Linker is
+      for Default_Switches ("Ada") use
+        ("-Wl,--gc-sections",
+         "-Wl,--print-memory-usage",
+         "-Wl,--defsym=__stack_size=8192");  --  8KB stack
+   end Linker;
+
+   package Builder is
+      for Executable_Suffix use ".elf";
+   end Builder;
+
+end STM32_RTU;

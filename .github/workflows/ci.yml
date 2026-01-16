@@ -1,0 +1,141 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Alire
+        uses: alire-project/setup-alire@v3
+        with:
+          version: 2.1.0
+          toolchain: gnat_native^15
+
+      - name: Select toolchain
+        run: alr toolchain --select gnat_native^15 gprbuild
+
+      - name: Build library
+        run: alr build
+
+      - name: Build tests with coverage
+        run: |
+          alr exec -- gprbuild -P tests/aunit_tests.gpr -XAUNIT_RUNTIME=full -XCOVERAGE=enabled -aP aunit/lib/gnat
+
+      - name: Run tests
+        run: ./bin/test_runner
+
+      - name: Install lcov
+        run: sudo apt-get update && sudo apt-get install -y lcov
+
+      - name: Generate coverage report
+        run: |
+          GCOV_TOOL=$(alr exec -- which gcov)
+          lcov --capture --directory obj/tests --output-file coverage.info --gcov-tool "$GCOV_TOOL"
+          lcov --remove coverage.info '/usr/*' '*/aunit/*' --output-file coverage.info --ignore-errors unused
+          lcov --list coverage.info
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.info
+          fail_ci_if_error: false
+
+      - name: Build examples
+        run: alr exec -- gprbuild -P examples/examples.gpr
+
+  spark-verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Alire
+        uses: alire-project/setup-alire@v3
+        with:
+          version: 2.1.0
+          toolchain: gnat_native^15
+
+      - name: Select toolchain
+        run: alr toolchain --select gnat_native^15 gprbuild
+
+      - name: Cache SPARK results
+        uses: actions/cache@v4
+        with:
+          path: obj/gnatprove
+          key: spark-${{ runner.os }}-${{ hashFiles('src/**/*.ads', 'src/**/*.adb') }}
+          restore-keys: |
+            spark-${{ runner.os }}-
+
+      - name: Run SPARK proof
+        run: |
+          alr exec -- gnatprove -P adamodbus.gpr \
+            --mode=prove --level=1 -j0 \
+            --report=statistics --output=oneline 2>&1 | tee spark_results.txt
+
+          # Check for proof regression (should have <=5 unproven)
+          UNPROVEN=$(grep -oP 'Unproved\s+\K\d+' spark_results.txt || echo "0")
+          echo "Unproven checks: $UNPROVEN"
+          if [ "$UNPROVEN" -gt 5 ]; then
+            echo "::error::SPARK proof regression: $UNPROVEN unproven checks (expected <=5)"
+            exit 1
+          fi
+
+      - name: Upload SPARK results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spark-results
+          path: |
+            spark_results.txt
+            obj/gnatprove/gnatprove.out
+
+  build-embedded:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Alire
+        uses: alire-project/setup-alire@v3
+        with:
+          version: 2.1.0
+          toolchain: gnat_arm_elf^15
+
+      - name: Select ARM toolchain
+        run: alr toolchain --select gnat_arm_elf^15 gprbuild
+
+      - name: Install QEMU
+        run: sudo apt-get update && sudo apt-get install -y qemu-system-arm
+
+      - name: Build embedded loopback example
+        run: cd examples/embedded/cortex_m4_lwip && alr build
+
+      - name: Run loopback test in QEMU
+        run: |
+          timeout 10 qemu-system-arm -M lm3s6965evb -nographic -semihosting \
+            -kernel examples/embedded/cortex_m4_lwip/bin/main_loopback.elf || true
+
+      - name: Build RTU master/slave examples
+        run: |
+          cd examples/embedded/stm32_rtu && alr build
+          alr exec -- gprbuild -P stm32_rtu.gpr -XMAIN=slave
+          alr exec -- gprbuild -P stm32_rtu.gpr -XMAIN=master
+
+      - name: Run RTU master/slave test in QEMU
+        run: |
+          chmod +x examples/embedded/stm32_rtu/run_ci_test.sh
+          examples/embedded/stm32_rtu/run_ci_test.sh

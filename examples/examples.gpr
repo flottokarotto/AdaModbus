@@ -1,0 +1,29 @@
+with "../adamodbus.gpr";
+
+project Examples is
+
+   for Source_Dirs use (".");
+   for Object_Dir use "../obj/examples";
+   for Exec_Dir use "../bin";
+
+   for Main use ("slave_example.adb", "loopback_example.adb",
+                  "tcp_slave.adb", "tcp_master.adb",
+                  "rtu_slave.adb", "rtu_master.adb",
+                  "async_master.adb", "ascii_master.adb", "ascii_slave.adb",
+                  "modbus_gateway.adb", "multi_slave_poll.adb",
+                  "diagnostics_demo.adb", "data_logger.adb",
+                  "device_simulator.adb");
+
+   package Compiler is
+      --  Inherit common switches from main library, plus debug flags:
+      --    -gnat2022  : Ada 2022 language standard
+      --    -gnatwa    : Enable all common warnings
+      --    -gnatw.X   : Disable warnings for No_Exception_Propagation
+      --    -g         : Generate debug information
+      --    -O0        : No optimization (better debugging)
+      --    -gnata     : Enable assertions and contracts
+      for Default_Switches ("Ada") use
+        ("-gnat2022", "-gnatwa", "-gnatw.X", "-g", "-O0", "-gnata");
+   end Compiler;
+
+end Examples;
