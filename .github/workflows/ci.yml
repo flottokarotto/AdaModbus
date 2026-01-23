@@ -29,7 +29,9 @@ jobs:
         run: alr build
 
       - name: Add test dependencies
-        run: alr --force with aunit gnatprove
+        run: |
+          alr --force with aunit
+          alr update
 
       - name: Build tests with coverage
         run: |
