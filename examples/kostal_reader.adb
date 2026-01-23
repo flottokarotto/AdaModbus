@@ -18,6 +18,7 @@ with Ada.Command_Line;
 with Ada.Calendar;
 with Ada.Exceptions;
 with Interfaces; use Interfaces;
+use type Interfaces.Integer_16;
 
 with Ada_Modbus;
 with Ada_Modbus.Master;
@@ -62,7 +63,8 @@ procedure Kostal_Reader is
    function Get_Tick return Unsigned_32 is
       use Ada.Calendar;
       Now     : constant Time := Clock;
-      Seconds : constant Duration := Now - Time_Of (1970, 1, 1, 0.0);
+      --  Use seconds since midnight to avoid overflow
+      Seconds : constant Day_Duration := Ada.Calendar.Seconds (Now);
    begin
       return Unsigned_32 (Seconds * 1000.0) mod Unsigned_32'Last;
    end Get_Tick;
@@ -147,6 +149,26 @@ procedure Kostal_Reader is
       end;
    end Read_Common_Model;
 
+   --  Convert unsigned register to signed scale factor
+   --  SunSpec scale factors are signed 16-bit stored as unsigned
+   function To_Scale_Factor (Reg : Register_Value) return Scale_Factor is
+      Raw : Integer;
+   begin
+      --  Convert unsigned to signed (two's complement)
+      if Reg > 32767 then
+         Raw := Integer (Reg) - 65536;
+      else
+         Raw := Integer (Reg);
+      end if;
+
+      if Raw in -10 .. 10 then
+         return Scale_Factor (Raw);
+      else
+         --  Invalid SF, use 0 (no scaling)
+         return 0;
+      end if;
+   end To_Scale_Factor;
+
    --  Read and display Inverter Model (Model 101/102/103)
    procedure Read_Inverter_Model
      (Slave       : Unit_Id;
@@ -166,10 +188,10 @@ procedure Kostal_Reader is
       --  Read AC measurements (regs 2-17)
       if Read_Registers (Slave, Model_Start + 2, 16, AC_Regs) then
          declare
-            Current_SF : constant Scale_Factor := Scale_Factor (AC_Regs (4));
-            Voltage_SF : constant Scale_Factor := Scale_Factor (AC_Regs (11));
-            Power_SF   : constant Scale_Factor := Scale_Factor (AC_Regs (13));
-            Freq_SF    : constant Scale_Factor := Scale_Factor (AC_Regs (15));
+            Current_SF : constant Scale_Factor := To_Scale_Factor (AC_Regs (4));
+            Voltage_SF : constant Scale_Factor := To_Scale_Factor (AC_Regs (11));
+            Power_SF   : constant Scale_Factor := To_Scale_Factor (AC_Regs (13));
+            Freq_SF    : constant Scale_Factor := To_Scale_Factor (AC_Regs (15));
          begin
             Put_Line ("  AC Current:   " &
                       Float'Image (Apply_Scale (AC_Regs (0), Current_SF)) & " A");
@@ -185,9 +207,9 @@ procedure Kostal_Reader is
       --  Read DC measurements (regs 27-32)
       if Read_Registers (Slave, Model_Start + 27, 6, DC_Regs) then
          declare
-            DC_A_SF : constant Scale_Factor := Scale_Factor (DC_Regs (1));
-            DC_V_SF : constant Scale_Factor := Scale_Factor (DC_Regs (3));
-            DC_W_SF : constant Scale_Factor := Scale_Factor (DC_Regs (5));
+            DC_A_SF : constant Scale_Factor := To_Scale_Factor (DC_Regs (1));
+            DC_V_SF : constant Scale_Factor := To_Scale_Factor (DC_Regs (3));
+            DC_W_SF : constant Scale_Factor := To_Scale_Factor (DC_Regs (5));
          begin
             Put_Line ("  DC Current:   " &
                       Float'Image (Apply_Scale (DC_Regs (0), DC_A_SF)) & " A");
@@ -203,7 +225,7 @@ procedure Kostal_Reader is
          declare
             Energy_Raw : constant Unsigned_32 :=
               Unsigned_32 (Energy_Regs (0)) * 65536 + Unsigned_32 (Energy_Regs (1));
-            Energy_SF  : constant Scale_Factor := Scale_Factor (Energy_Regs (2));
+            Energy_SF  : constant Scale_Factor := To_Scale_Factor (Energy_Regs (2));
             Energy_Wh  : constant Float :=
               Float (Energy_Raw) * Scale_Multipliers (Energy_SF);
          begin
@@ -215,7 +237,7 @@ procedure Kostal_Reader is
       --  Read Temperature (regs 33-37)
       if Read_Registers (Slave, Model_Start + 33, 5, Temp_Regs) then
          declare
-            Temp_SF : constant Scale_Factor := Scale_Factor (Temp_Regs (4));
+            Temp_SF : constant Scale_Factor := To_Scale_Factor (Temp_Regs (4));
          begin
             Put_Line ("  Cabinet Temp: " &
                       Float'Image (Apply_Scale (Temp_Regs (0), Temp_SF)) & " C");
