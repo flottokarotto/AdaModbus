@@ -29,7 +29,7 @@ jobs:
         run: alr build
 
       - name: Add test dependencies
-        run: alr with aunit gnatprove --force
+        run: alr --force with aunit gnatprove
 
       - name: Build tests with coverage
         run: |
@@ -75,7 +75,7 @@ jobs:
         run: alr toolchain --select gnat_native^15 gprbuild
 
       - name: Add gnatprove
-        run: alr with gnatprove --force
+        run: alr --force with gnatprove
 
       - name: Cache SPARK results
         uses: actions/cache@v4
