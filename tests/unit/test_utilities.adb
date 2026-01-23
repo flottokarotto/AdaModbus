@@ -4,6 +4,7 @@
 
 with AUnit.Assertions; use AUnit.Assertions;
 with AUnit.Test_Cases; use AUnit.Test_Cases;
+with Interfaces;
 with Ada_Modbus; use Ada_Modbus;
 with Ada_Modbus.Utilities; use Ada_Modbus.Utilities;
 
@@ -93,6 +94,69 @@ package body Test_Utilities is
       Assert (Decoded = Original, "Round-trip should preserve value");
    end Test_Round_Trip;
 
+   --  Test: 32-bit Big-Endian (ABCD)
+   procedure Test_32bit_Big_Endian (T : in Out Test_Case'Class);
+   procedure Test_32bit_Big_Endian (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      use type Interfaces.Unsigned_32;
+      Result : Interfaces.Unsigned_32;
+   begin
+      --  0x12345678: High=0x1234, Low=0x5678
+      Result := To_Unsigned_32 (16#1234#, 16#5678#, Big_Endian);
+      Assert (Result = 16#12345678#, "ABCD: 0x1234, 0x5678 -> 0x12345678");
+
+      Result := To_Unsigned_32 (16#0000#, 16#0001#, Big_Endian);
+      Assert (Result = 16#00000001#, "ABCD: 0x0000, 0x0001 -> 0x00000001");
+
+      Result := To_Unsigned_32 (16#FFFF#, 16#FFFF#, Big_Endian);
+      Assert (Result = 16#FFFFFFFF#, "ABCD: max value");
+   end Test_32bit_Big_Endian;
+
+   --  Test: 32-bit Mid-Little-Endian (CDAB) - word-swapped
+   procedure Test_32bit_Word_Swap (T : in Out Test_Case'Class);
+   procedure Test_32bit_Word_Swap (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      use type Interfaces.Unsigned_32;
+      Result : Interfaces.Unsigned_32;
+   begin
+      --  CDAB: Low word first, so 0x5678, 0x1234 -> 0x12345678
+      Result := To_Unsigned_32 (16#5678#, 16#1234#, Mid_Little_Endian);
+      Assert (Result = 16#12345678#, "CDAB: 0x5678, 0x1234 -> 0x12345678");
+   end Test_32bit_Word_Swap;
+
+   --  Test: 32-bit from Register_Array
+   procedure Test_32bit_From_Array (T : in Out Test_Case'Class);
+   procedure Test_32bit_From_Array (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      use type Interfaces.Unsigned_32;
+      Regs   : constant Register_Array := [16#ABCD#, 16#EF01#];
+      Result : Interfaces.Unsigned_32;
+   begin
+      Result := Registers_To_Unsigned_32 (Regs, Big_Endian);
+      Assert (Result = 16#ABCDEF01#, "Array ABCD: 0xABCDEF01");
+
+      Result := Registers_To_Unsigned_32 (Regs, Mid_Little_Endian);
+      Assert (Result = 16#EF01ABCD#, "Array CDAB: 0xEF01ABCD");
+   end Test_32bit_From_Array;
+
+   --  Test: 32-bit round-trip
+   procedure Test_32bit_Round_Trip (T : in Out Test_Case'Class);
+   procedure Test_32bit_Round_Trip (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      use type Interfaces.Unsigned_32;
+      Original : constant Interfaces.Unsigned_32 := 16#DEADBEEF#;
+      High, Low : Register_Value;
+      Decoded  : Interfaces.Unsigned_32;
+   begin
+      From_Unsigned_32 (Original, High, Low, Big_Endian);
+      Decoded := To_Unsigned_32 (High, Low, Big_Endian);
+      Assert (Decoded = Original, "ABCD round-trip");
+
+      From_Unsigned_32 (Original, High, Low, Mid_Little_Endian);
+      Decoded := To_Unsigned_32 (High, Low, Mid_Little_Endian);
+      Assert (Decoded = Original, "CDAB round-trip");
+   end Test_32bit_Round_Trip;
+
    overriding procedure Register_Tests (T : in Out Utilities_Test_Case) is
    begin
       Registration.Register_Routine (T, Test_To_Big_Endian'Access, "To_Big_Endian");
@@ -101,6 +165,10 @@ package body Test_Utilities is
       Registration.Register_Routine (T, Test_High_Byte'Access, "High_Byte");
       Registration.Register_Routine (T, Test_Low_Byte'Access, "Low_Byte");
       Registration.Register_Routine (T, Test_Round_Trip'Access, "Round-trip conversion");
+      Registration.Register_Routine (T, Test_32bit_Big_Endian'Access, "32-bit Big-Endian (ABCD)");
+      Registration.Register_Routine (T, Test_32bit_Word_Swap'Access, "32-bit Word-Swap (CDAB)");
+      Registration.Register_Routine (T, Test_32bit_From_Array'Access, "32-bit from Register_Array");
+      Registration.Register_Routine (T, Test_32bit_Round_Trip'Access, "32-bit round-trip");
    end Register_Tests;
 
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
