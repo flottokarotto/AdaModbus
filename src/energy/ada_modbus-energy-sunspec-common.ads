@@ -86,6 +86,7 @@ is
       Len    : out Natural;
       Result : out Status)
      with Pre => Length <= Protocol.Max_PDU_Size
-                 and then Value'Length = 16;
+                 and then Value'Length = 16
+                 and then Value'First <= Integer'Last - 16;
 
 end Ada_Modbus.Energy.SunSpec.Common;

@@ -55,6 +55,30 @@ is
    --  Scale factors (sunssf type: -10 to +10)
    type Scale_Factor is range -10 .. 10;
 
+   --  Lookup table for scale factors (avoids floating-point exponentiation)
+   Scale_Multipliers : constant array (Scale_Factor) of Float :=
+     [-10 => 1.0E-10,
+      -9  => 1.0E-9,
+      -8  => 1.0E-8,
+      -7  => 1.0E-7,
+      -6  => 1.0E-6,
+      -5  => 1.0E-5,
+      -4  => 1.0E-4,
+      -3  => 1.0E-3,
+      -2  => 1.0E-2,
+      -1  => 1.0E-1,
+       0  => 1.0,
+       1  => 1.0E1,
+       2  => 1.0E2,
+       3  => 1.0E3,
+       4  => 1.0E4,
+       5  => 1.0E5,
+       6  => 1.0E6,
+       7  => 1.0E7,
+       8  => 1.0E8,
+       9  => 1.0E9,
+       10 => 1.0E10];
+
    --  Apply scale factor to a register value
    function Apply_Scale (Value : Register_Value; SF : Scale_Factor) return Float
      with Inline;

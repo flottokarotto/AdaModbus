@@ -13,7 +13,7 @@ is
    function Apply_Scale (Value : Register_Value; SF : Scale_Factor) return Float
    is
    begin
-      return Float (Value) * (10.0 ** Integer (SF));
+      return Float (Value) * Scale_Multipliers (SF);
    end Apply_Scale;
 
    -------------------

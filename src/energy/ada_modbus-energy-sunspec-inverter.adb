@@ -200,6 +200,7 @@ is
 
       if Result = Success and then Reg_Count >= 3 then
          --  32-bit value in registers 0-1 (big-endian)
+         --  Combine words first, then scale to avoid float overflow
          declare
             use type Interfaces.Unsigned_32;
             High_Word : constant Interfaces.Unsigned_32 :=
@@ -210,7 +211,8 @@ is
               Interfaces.Shift_Left (High_Word, 16) or Low_Word;
             SF : constant Scale_Factor := To_Scale_Factor (Values (2));
          begin
-            Energy_Wh := Float (Raw_Value) * (10.0 ** Integer (SF));
+            --  Convert to float then scale - Apply_Scale uses lookup table
+            Energy_Wh := Float (Raw_Value) * Scale_Multipliers (SF);
          end;
       end if;
    end Decode_Energy_Response;

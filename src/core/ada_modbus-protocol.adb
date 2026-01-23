@@ -8,6 +8,10 @@ package body Ada_Modbus.Protocol
   with SPARK_Mode => On
 is
 
+   --  Bit mask lookup table to avoid exponentiation
+   Bit_Masks : constant array (Natural range 0 .. 7) of Byte :=
+     [1, 2, 4, 8, 16, 32, 64, 128];
+
    -----------------------
    -- To_Exception_Byte --
    -----------------------
@@ -167,7 +171,7 @@ is
          pragma Loop_Invariant (Bit_Idx <= 7);
          pragma Loop_Invariant (6 + (I - Values'First) / 8 < Max_PDU_Size);
          if Values (I) then
-            Byte_Val := Byte_Val or Byte (2 ** Bit_Idx);
+            Byte_Val := Byte_Val or Bit_Masks (Bit_Idx);
          end if;
          Bit_Idx := Bit_Idx + 1;
          if Bit_Idx = 8 then
@@ -267,7 +271,7 @@ is
                B        : constant Byte := Buffer (2 + Byte_Idx);
             begin
                pragma Assert (Bit_Idx <= 7);
-               Values (Values'First + I) := (B and Byte (2 ** Bit_Idx)) /= 0;
+               Values (Values'First + I) := (B and Bit_Masks (Bit_Idx)) /= 0;
             end;
          end loop;
          Count := Bit_Count;

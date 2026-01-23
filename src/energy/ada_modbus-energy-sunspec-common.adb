@@ -137,9 +137,11 @@ is
          Count    => Reg_Count,
          Response => Result);
 
-      if Result = Success and then Reg_Count <= 8 then
+      if Result = Success and then Reg_Count >= 1 and then Reg_Count <= 8 then
          Decode_String (Values (0 .. Reg_Count - 1), Temp, Temp_Len);
-         if Temp_Len <= 16 then
+         if Temp_Len = 0 then
+            Len := 0;
+         elsif Temp_Len <= 16 then
             Len := Temp_Len;
             Value (Value'First .. Value'First + Len - 1) := Temp (1 .. Len);
          else

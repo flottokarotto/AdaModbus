@@ -47,7 +47,8 @@ is
       Length        : out Natural;
       FC            : Function_Code;
       Start_Address : Coil_Address;
-      Quantity      : Coil_Count);
+      Quantity      : Coil_Count)
+     with Post => Length = 5;
 
    --  Read Holding Registers (FC 03) / Read Input Registers (FC 04)
    --  Request: FC(1) + Start Address(2) + Quantity(2) = 5 bytes
@@ -56,7 +57,8 @@ is
       Length        : out Natural;
       FC            : Function_Code;
       Start_Address : Register_Address;
-      Quantity      : Register_Count);
+      Quantity      : Register_Count)
+     with Post => Length = 5;
 
    --  Write Single Coil (FC 05)
    --  Request: FC(1) + Address(2) + Value(2) = 5 bytes
@@ -65,7 +67,8 @@ is
      (Buffer  : out PDU_Buffer;
       Length  : out Natural;
       Address : Coil_Address;
-      Value   : Coil_Value);
+      Value   : Coil_Value)
+     with Post => Length = 5;
 
    --  Write Single Register (FC 06)
    --  Request: FC(1) + Address(2) + Value(2) = 5 bytes
@@ -73,7 +76,8 @@ is
      (Buffer  : out PDU_Buffer;
       Length  : out Natural;
       Address : Register_Address;
-      Value   : Register_Value);
+      Value   : Register_Value)
+     with Post => Length = 5;
 
    --  Write Multiple Coils (FC 15)
    --  Request: FC(1) + Start(2) + Quantity(2) + ByteCount(1) + Values(n)
