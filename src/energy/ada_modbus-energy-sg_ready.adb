@@ -92,11 +92,11 @@ is
       State := Normal;  --  Default
 
       Protocol.Decode_Read_Registers_Response
-        (Buffer    => Buffer,
-         Length    => Length,
-         Values    => Values,
-         Reg_Count => Reg_Count,
-         Result    => Result);
+        (Buffer   => Buffer,
+         Length   => Length,
+         Values   => Values,
+         Count    => Reg_Count,
+         Response => Result);
 
       if Result = Success and then Reg_Count >= 1 then
          State := From_Register_Value (Values (0));

@@ -73,8 +73,8 @@ is
         (Buffer    => Buffer,
          Length    => Length,
          Values    => Values,
-         Reg_Count => Reg_Count,
-         Result    => Result);
+         Count    => Reg_Count,
+         Response => Result);
 
       if Result = Success and then Reg_Count >= 1 then
          if Values (0) <= 100 then
@@ -122,8 +122,8 @@ is
         (Buffer    => Buffer,
          Length    => Length,
          Values    => Values,
-         Reg_Count => Reg_Count,
-         Result    => Result);
+         Count    => Reg_Count,
+         Response => Result);
 
       if Result = Success and then Reg_Count >= 1 then
          Watts := Natural (Values (0)) * Power_Scale;

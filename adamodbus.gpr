@@ -34,7 +34,14 @@ project Adamodbus is
       "Ada_Modbus.Protocol.TCP",
       "Ada_Modbus.Transport",
       "Ada_Modbus.Transport.TCP",
-      "Ada_Modbus.Transport.Serial");
+      "Ada_Modbus.Transport.Serial",
+      "Ada_Modbus.Energy",
+      "Ada_Modbus.Energy.SG_Ready",
+      "Ada_Modbus.Energy.Grid_Control",
+      "Ada_Modbus.Energy.SunSpec",
+      "Ada_Modbus.Energy.SunSpec.Common",
+      "Ada_Modbus.Energy.SunSpec.Inverter",
+      "Ada_Modbus.Energy.SunSpec.Storage");
 
    type Build_Mode_Type is ("debug", "release");
    Build_Mode : Build_Mode_Type := external ("ADAMODBUS_BUILD_MODE", "debug");
