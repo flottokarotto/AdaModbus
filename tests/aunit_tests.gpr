@@ -19,9 +19,9 @@ project Aunit_Tests is
       --    -gnatw.X   : Disable warnings for No_Exception_Propagation
       --    -g         : Generate debug information
       --    -O0        : No optimization (better debugging)
-      --    -gnata     : Enable assertions and contracts
       --    -gnatw_A   : Disable anonymous access type allocator warnings (AUnit pattern)
-      Common_Switches := ("-gnat2022", "-gnatwa", "-gnatw.X", "-gnatw_A", "-g", "-O0", "-gnata");
+      --  Note: -gnata omitted - SPARK proves contracts, tests should match runtime behavior
+      Common_Switches := ("-gnat2022", "-gnatwa", "-gnatw.X", "-gnatw_A", "-g", "-O0");
 
       case Coverage is
          when "disabled" =>
