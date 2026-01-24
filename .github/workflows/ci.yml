@@ -93,7 +93,7 @@ jobs:
 
       - name: Start Modbus Simulator
         run: |
-          python tests/integration/modbus_simulator.py --port 5020 &
+          python3 tests/integration/modbus_simulator.py --port 5020 &
           sleep 2
 
       - name: Build integration tests
