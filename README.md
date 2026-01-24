@@ -27,7 +27,7 @@ Ada 2022 Modbus library for embedded and desktop systems.
 - **Energy system integrators** connecting solar inverters, battery storage, and smart meters using SunSpec profiles
 - **Industrial automation engineers** who need a formally verified protocol stack for safety-critical applications
 - **Ada/SPARK enthusiasts** looking for a modern, well-documented Modbus implementation
-- **C/C++ developers** who want a battle-tested Modbus library without writing Ada code (via C API)
+- **C/C++ developers** who want a formally verified Modbus library without writing Ada code (via C API)
 
 ## Supported Function Codes
 
