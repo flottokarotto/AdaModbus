@@ -97,6 +97,17 @@ jobs:
           toolchain: gnat_native^15
           cache: true
 
+      - name: Cache Alire downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/alire
+          key: alire-cache-${{ runner.os }}-${{ hashFiles('alire.toml', 'alire.lock') }}
+          restore-keys: |
+            alire-cache-${{ runner.os }}-
+
+      - name: Select toolchain
+        run: alr toolchain --select gnat_native^15 gprbuild
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
