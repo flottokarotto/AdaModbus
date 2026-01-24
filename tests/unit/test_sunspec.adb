@@ -417,6 +417,65 @@ package body Test_SunSpec is
       Assert (Buffer (4) = 16#10#, "Quantity should be 16");
    end Test_Common_Model_Requests;
 
+   --  Test: To_Scale_Factor conversion
+   procedure Test_To_Scale_Factor (T : in Out Test_Case'Class);
+   procedure Test_To_Scale_Factor (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+   begin
+      --  Positive scale factors
+      Assert (To_Scale_Factor (0) = 0, "SF 0 should be 0");
+      Assert (To_Scale_Factor (1) = 1, "SF 1 should be 1");
+      Assert (To_Scale_Factor (10) = 10, "SF 10 should be 10");
+
+      --  Negative scale factors (two's complement)
+      --  -1 = 65535, -2 = 65534, etc.
+      Assert (To_Scale_Factor (65535) = -1, "SF 0xFFFF should be -1");
+      Assert (To_Scale_Factor (65534) = -2, "SF 0xFFFE should be -2");
+      Assert (To_Scale_Factor (65526) = -10, "SF 0xFFF6 should be -10");
+
+      --  Out of range values should clamp to 0
+      Assert (To_Scale_Factor (11) = 0, "SF 11 should clamp to 0");
+      Assert (To_Scale_Factor (100) = 0, "SF 100 should clamp to 0");
+      Assert (To_Scale_Factor (65525) = 0, "SF -11 should clamp to 0");
+   end Test_To_Scale_Factor;
+
+   --  Test: To_Signed_16 conversion
+   procedure Test_To_Signed_16 (T : in Out Test_Case'Class);
+   procedure Test_To_Signed_16 (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+   begin
+      --  Positive values
+      Assert (To_Signed_16 (0) = 0, "0 should be 0");
+      Assert (To_Signed_16 (100) = 100, "100 should be 100");
+      Assert (To_Signed_16 (32767) = 32767, "32767 should be 32767");
+
+      --  Negative values (two's complement)
+      Assert (To_Signed_16 (65535) = -1, "0xFFFF should be -1");
+      Assert (To_Signed_16 (65436) = -100, "65436 should be -100");
+      Assert (To_Signed_16 (32768) = -32768, "0x8000 should be -32768");
+   end Test_To_Signed_16;
+
+   --  Test: Is_Implemented checks
+   procedure Test_Is_Implemented (T : in Out Test_Case'Class);
+   procedure Test_Is_Implemented (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+   begin
+      --  Valid values should be implemented
+      Assert (Is_Implemented (0), "0 should be implemented");
+      Assert (Is_Implemented (1234), "1234 should be implemented");
+      Assert (Is_Implemented (32766), "32766 should be implemented");
+
+      --  Not implemented markers for uint16
+      Assert (not Is_Implemented (16#FFFF#), "0xFFFF should not be implemented");
+      Assert (not Is_Implemented (16#7FFF#), "0x7FFF should not be implemented (some devices use this)");
+
+      --  Int16 checks
+      Assert (Is_Implemented_Int16 (0), "0 should be implemented (int16)");
+      Assert (Is_Implemented_Int16 (1234), "1234 should be implemented (int16)");
+      Assert (not Is_Implemented_Int16 (16#8000#), "0x8000 should not be implemented (int16)");
+      Assert (not Is_Implemented_Int16 (16#FFFF#), "0xFFFF should not be implemented (int16)");
+   end Test_Is_Implemented;
+
    ---------------------
    -- Register_Tests --
    ---------------------
@@ -451,6 +510,12 @@ package body Test_SunSpec is
                           "Inverter State Decode");
       Registration.Register_Routine (T, Test_Common_Model_Requests'Access,
                           "Common Model Request Encoding");
+      Registration.Register_Routine (T, Test_To_Scale_Factor'Access,
+                          "To_Scale_Factor conversion");
+      Registration.Register_Routine (T, Test_To_Signed_16'Access,
+                          "To_Signed_16 conversion");
+      Registration.Register_Routine (T, Test_Is_Implemented'Access,
+                          "Is_Implemented checks");
    end Register_Tests;
 
    -----------

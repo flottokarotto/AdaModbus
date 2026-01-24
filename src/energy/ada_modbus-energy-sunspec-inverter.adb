@@ -5,24 +5,7 @@
 package body Ada_Modbus.Energy.SunSpec.Inverter
   with SPARK_Mode => On
 is
-
-   --  Helper: Extract signed scale factor from register
-   function To_Scale_Factor (Value : Register_Value) return Scale_Factor is
-      Raw : constant Integer := Integer (Value);
-   begin
-      if Raw > 32767 then
-         --  Negative (two's complement)
-         if Raw - 65536 >= -10 then
-            return Scale_Factor (Raw - 65536);
-         else
-            return -10;
-         end if;
-      elsif Raw <= 10 then
-         return Scale_Factor (Raw);
-      else
-         return 0;
-      end if;
-   end To_Scale_Factor;
+   --  Note: To_Scale_Factor is now exported from parent package SunSpec
 
    ----------------------------------------
    -- Encode_Read_AC_Measurements_Request --
@@ -272,5 +255,78 @@ is
          end case;
       end if;
    end Decode_State_Response;
+
+   -------------------------
+   -- MPPT Model 160      --
+   -------------------------
+
+   ------------------------
+   -- Decode_MPPT_Header --
+   ------------------------
+
+   procedure Decode_MPPT_Header
+     (Regs   : Register_Array;
+      Header : out MPPT_Header)
+   is
+   begin
+      Header.DCA_SF := To_Scale_Factor (Regs (Regs'First));
+      Header.DCV_SF := To_Scale_Factor (Regs (Regs'First + 1));
+      Header.DCW_SF := To_Scale_Factor (Regs (Regs'First + 2));
+      Header.Num_Modules := Natural (Regs (Regs'First + 6));
+   end Decode_MPPT_Header;
+
+   ------------------------
+   -- Decode_MPPT_Module --
+   ------------------------
+
+   procedure Decode_MPPT_Module
+     (Regs   : Register_Array;
+      Header : MPPT_Header;
+      Module : out MPPT_Module_Data)
+   is
+      Base      : constant Natural := Regs'First;
+      DCA_Reg   : constant Register_Value := Regs (Base + MPPT_Mod_DCA);
+      DCV_Reg   : constant Register_Value := Regs (Base + MPPT_Mod_DCV);
+      DCW_Reg   : constant Register_Value := Regs (Base + MPPT_Mod_DCW);
+      State_Reg : constant Register_Value := Regs (Base + MPPT_Mod_DCSt);
+   begin
+      Module.Module_ID := Natural (Regs (Base + MPPT_Mod_ID));
+
+      --  Check if values are implemented
+      Module.Is_Valid := Is_Implemented (DCA_Reg) or else
+                         Is_Implemented (DCV_Reg) or else
+                         Is_Implemented (DCW_Reg);
+
+      if Is_Implemented (DCA_Reg) then
+         Module.Current_A := Apply_Scale (DCA_Reg, Header.DCA_SF);
+      else
+         Module.Current_A := 0.0;
+      end if;
+
+      if Is_Implemented (DCV_Reg) then
+         Module.Voltage_V := Apply_Scale (DCV_Reg, Header.DCV_SF);
+      else
+         Module.Voltage_V := 0.0;
+      end if;
+
+      if Is_Implemented (DCW_Reg) then
+         Module.Power_W := Apply_Scale (DCW_Reg, Header.DCW_SF);
+      else
+         Module.Power_W := 0.0;
+      end if;
+
+      --  Decode operating state
+      case State_Reg is
+         when 1 => Module.State := MPPT_Off;
+         when 2 => Module.State := MPPT_Sleeping;
+         when 3 => Module.State := MPPT_Starting;
+         when 4 => Module.State := MPPT_Running;
+         when 5 => Module.State := MPPT_Throttled;
+         when 6 => Module.State := MPPT_Shutting_Down;
+         when 7 => Module.State := MPPT_Fault;
+         when 8 => Module.State := MPPT_Standby;
+         when others => Module.State := MPPT_Unknown;
+      end case;
+   end Decode_MPPT_Module;
 
 end Ada_Modbus.Energy.SunSpec.Inverter;

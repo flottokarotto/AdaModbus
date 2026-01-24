@@ -41,7 +41,8 @@ project Adamodbus is
       "Ada_Modbus.Energy.SunSpec",
       "Ada_Modbus.Energy.SunSpec.Common",
       "Ada_Modbus.Energy.SunSpec.Inverter",
-      "Ada_Modbus.Energy.SunSpec.Storage");
+      "Ada_Modbus.Energy.SunSpec.Storage",
+      "Ada_Modbus.Energy.SunSpec.Meter");
 
    type Build_Mode_Type is ("debug", "release");
    Build_Mode : Build_Mode_Type := external ("ADAMODBUS_BUILD_MODE", "debug");
@@ -86,6 +87,8 @@ project Adamodbus is
             for Switches ("ada_modbus-energy-sunspec-inverter.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
             for Switches ("ada_modbus-energy-sunspec-storage.ads") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
             for Switches ("ada_modbus-energy-sunspec-storage.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
+            for Switches ("ada_modbus-energy-sunspec-meter.ads") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
+            for Switches ("ada_modbus-energy-sunspec-meter.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
             for Switches ("ada_modbus-energy-sg_ready.ads") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
             for Switches ("ada_modbus-energy-sg_ready.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
             for Switches ("ada_modbus-energy-grid_control.ads") use Common_Switches & ("-O2", "-gnatn", "-gnatp");

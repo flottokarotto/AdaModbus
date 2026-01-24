@@ -32,6 +32,12 @@ is
    --  End of model marker
    End_Model_ID : constant Register_Value := 16#FFFF#;
 
+   --  "Not Implemented" markers in SunSpec
+   --  Different data types use different markers
+   Not_Implemented       : constant Register_Value := 16#FFFF#;  --  uint16
+   Not_Implemented_Int16 : constant Register_Value := 16#8000#;  --  int16
+   Not_Implemented_Acc32 : constant Register_Value := 16#0000#;  --  acc32 (0)
+
    --  Common SunSpec Model IDs
    Model_Common         : constant := 1;
    Model_Inverter_1P    : constant := 101;  --  Single phase
@@ -78,6 +84,26 @@ is
        8  => 1.0E8,
        9  => 1.0E9,
        10 => 1.0E10];
+
+   --  Convert unsigned register to signed scale factor
+   --  SunSpec scale factors are signed 16-bit stored as unsigned
+   function To_Scale_Factor (Value : Register_Value) return Scale_Factor
+     with Inline;
+
+   --  Convert unsigned register to signed 16-bit integer
+   --  For SunSpec int16 values stored as unsigned
+   function To_Signed_16 (Value : Register_Value) return Integer
+     with Inline,
+          Post => To_Signed_16'Result in -32768 .. 32767;
+
+   --  Check if a register value is "implemented" (not a marker value)
+   --  Checks for common SunSpec "not implemented" markers
+   function Is_Implemented (Value : Register_Value) return Boolean
+     with Inline;
+
+   --  Check if a signed int16 value is "implemented"
+   function Is_Implemented_Int16 (Value : Register_Value) return Boolean
+     with Inline;
 
    --  Apply scale factor to a register value (unsigned)
    function Apply_Scale (Value : Register_Value; SF : Scale_Factor) return Float
@@ -136,5 +162,59 @@ is
       Header : out Model_Header;
       Result : out Status)
      with Pre => Length <= Protocol.Max_PDU_Size;
+
+   ---------------------
+   -- Model Discovery --
+   ---------------------
+
+   --  Information about a discovered model
+   type Model_Info is record
+      ID       : Model_ID;      --  Model ID (1, 101, 103, 124, 160, 201, etc.)
+      Length   : Model_Length;  --  Model data length (excluding header)
+      Offset   : Register_Address;  --  Offset from base address
+   end record;
+
+   --  Model discovery state for iteration
+   type Model_Iterator is record
+      Base_Address   : Register_Address;  --  SunSpec base (40000 or 50000)
+      Current_Offset : Register_Address;  --  Current position in model list
+      Max_Offset     : Register_Address;  --  Safety limit
+      Is_Valid       : Boolean;           --  True if iterator is valid
+   end record;
+
+   --  Initialize model iterator (call after verifying SunSpec identifier)
+   procedure Init_Model_Iterator
+     (Iterator     : out Model_Iterator;
+      Base_Address : Register_Address := Default_Base_Address;
+      Max_Offset   : Register_Address := 1000);
+
+   --  Calculate next model address from header response
+   --  Returns updated iterator with next model position
+   --  Call this after successfully reading a model header
+   procedure Advance_Model_Iterator
+     (Iterator : in out Model_Iterator;
+      Length   : Model_Length);
+
+   --  Check if current position is end marker (0xFFFF)
+   function Is_End_Model (Header : Model_Header) return Boolean
+     with Inline;
+
+   --  Get current read address for model header
+   function Get_Header_Address (Iterator : Model_Iterator) return Register_Address
+     with Inline;
+
+   --  Get model data start address (header address + 2)
+   function Get_Data_Address
+     (Base_Address : Register_Address;
+      Model_Offset : Register_Address) return Register_Address
+     with Inline;
+
+   --  Helper: Check if model ID is an Inverter model (101-103)
+   function Is_Inverter_Model (ID : Model_ID) return Boolean
+     with Inline;
+
+   --  Helper: Check if model ID is a Meter model (201-204)
+   function Is_Meter_Model (ID : Model_ID) return Boolean
+     with Inline;
 
 end Ada_Modbus.Energy.SunSpec;

@@ -1,4 +1,4 @@
---  Ada_Modbus.Energy.SunSpec.Inverter - SunSpec Inverter Models (101-103)
+--  Ada_Modbus.Energy.SunSpec.Inverter - SunSpec Inverter Models
 --  Copyright (c) 2026 Florian Fischer
 --  SPDX-License-Identifier: MIT
 --
@@ -6,8 +6,9 @@
 --  - Model 101: Single Phase Inverter
 --  - Model 102: Split Phase Inverter
 --  - Model 103: Three Phase Inverter
+--  - Model 160: Multiple MPPT (per-string DC measurements)
 --
---  All models share the same register structure for basic measurements.
+--  All 101-103 models share the same register structure for basic measurements.
 
 with Ada_Modbus.Protocol;
 
@@ -168,5 +169,86 @@ is
       State  : out Inverter_State;
       Result : out Status)
      with Pre => Length <= Protocol.Max_PDU_Size;
+
+   -------------------------
+   -- MPPT Model 160      --
+   -------------------------
+   --
+   --  Multiple MPPT Extension Model - provides per-string DC measurements.
+   --  Structure:
+   --    Offset 2-9:  Header (scale factors, module count)
+   --    Offset 10+:  Module data (20 registers each)
+
+   --  MPPT header register offsets
+   MPPT_Reg_DCA_SF   : constant := 2;   --  Current scale factor
+   MPPT_Reg_DCV_SF   : constant := 3;   --  Voltage scale factor
+   MPPT_Reg_DCW_SF   : constant := 4;   --  Power scale factor
+   MPPT_Reg_DCWH_SF  : constant := 5;   --  Energy scale factor
+   MPPT_Reg_Evt      : constant := 6;   --  Global events (uint32)
+   MPPT_Reg_N        : constant := 8;   --  Number of modules
+   MPPT_Reg_TmsPer   : constant := 9;   --  Timestamp period
+
+   --  MPPT module data offsets (relative to module start)
+   MPPT_Mod_ID       : constant := 0;   --  Module ID
+   MPPT_Mod_IDStr    : constant := 1;   --  ID string (8 registers)
+   MPPT_Mod_DCA      : constant := 9;   --  DC Current
+   MPPT_Mod_DCV      : constant := 10;  --  DC Voltage
+   MPPT_Mod_DCW      : constant := 11;  --  DC Power
+   MPPT_Mod_DCWH     : constant := 12;  --  Lifetime energy (uint32)
+   MPPT_Mod_Tms      : constant := 14;  --  Timestamp (uint32)
+   MPPT_Mod_Tmp      : constant := 16;  --  Temperature (int16)
+   MPPT_Mod_DCSt     : constant := 17;  --  Operating state
+   MPPT_Mod_DCEvt    : constant := 18;  --  Events (uint32)
+
+   MPPT_Module_Size  : constant := 20;  --  Registers per module
+   MPPT_Max_Modules  : constant := 8;   --  Maximum supported modules
+
+   --  MPPT operating state
+   type MPPT_State is
+     (MPPT_Off,
+      MPPT_Sleeping,
+      MPPT_Starting,
+      MPPT_Running,
+      MPPT_Throttled,
+      MPPT_Shutting_Down,
+      MPPT_Fault,
+      MPPT_Standby,
+      MPPT_Unknown);
+
+   --  MPPT header with scale factors
+   type MPPT_Header is record
+      DCA_SF      : Scale_Factor;  --  Current scale factor
+      DCV_SF      : Scale_Factor;  --  Voltage scale factor
+      DCW_SF      : Scale_Factor;  --  Power scale factor
+      Num_Modules : Natural;       --  Number of MPPT modules (strings)
+   end record;
+
+   --  MPPT module (string) data
+   type MPPT_Module_Data is record
+      Module_ID   : Natural;       --  Module/string ID
+      Current_A   : Float;         --  DC Current
+      Voltage_V   : Float;         --  DC Voltage
+      Power_W     : Float;         --  DC Power
+      State       : MPPT_State;    --  Operating state
+      Is_Valid    : Boolean;       --  True if data is valid (not 0xFFFF)
+   end record;
+
+   --  Array of MPPT modules
+   type MPPT_Module_Array is array (Natural range <>) of MPPT_Module_Data;
+
+   --  Decode MPPT header from register array
+   --  Input: 8 registers starting from model offset + 2
+   procedure Decode_MPPT_Header
+     (Regs   : Register_Array;
+      Header : out MPPT_Header)
+     with Pre => Regs'Length >= 8;
+
+   --  Decode single MPPT module from register array
+   --  Input: 20 registers for one module
+   procedure Decode_MPPT_Module
+     (Regs   : Register_Array;
+      Header : MPPT_Header;
+      Module : out MPPT_Module_Data)
+     with Pre => Regs'Length >= MPPT_Module_Size;
 
 end Ada_Modbus.Energy.SunSpec.Inverter;

@@ -6,6 +6,64 @@ package body Ada_Modbus.Energy.SunSpec
   with SPARK_Mode => On
 is
 
+   ---------------------
+   -- To_Scale_Factor --
+   ---------------------
+
+   function To_Scale_Factor (Value : Register_Value) return Scale_Factor is
+      Raw : Integer;
+   begin
+      --  Convert unsigned to signed (two's complement)
+      if Value > 32767 then
+         Raw := Integer (Value) - 65536;
+      else
+         Raw := Integer (Value);
+      end if;
+
+      --  Clamp to valid range
+      if Raw in -10 .. 10 then
+         return Scale_Factor (Raw);
+      else
+         --  Invalid SF, use 0 (no scaling)
+         return 0;
+      end if;
+   end To_Scale_Factor;
+
+   ------------------
+   -- To_Signed_16 --
+   ------------------
+
+   function To_Signed_16 (Value : Register_Value) return Integer is
+   begin
+      if Value > 32767 then
+         return Integer (Value) - 65536;
+      else
+         return Integer (Value);
+      end if;
+   end To_Signed_16;
+
+   --------------------
+   -- Is_Implemented --
+   --------------------
+
+   function Is_Implemented (Value : Register_Value) return Boolean is
+   begin
+      --  Check common "not implemented" markers for uint16
+      return Value /= Not_Implemented and then
+             Value /= 16#7FFF#;  --  Some devices use 0x7FFF
+   end Is_Implemented;
+
+   --------------------------
+   -- Is_Implemented_Int16 --
+   --------------------------
+
+   function Is_Implemented_Int16 (Value : Register_Value) return Boolean is
+   begin
+      --  Check "not implemented" markers for int16
+      return Value /= Not_Implemented_Int16 and then
+             Value /= Not_Implemented;
+   end Is_Implemented_Int16;
+
    -----------------
    -- Apply_Scale --
    -----------------
@@ -167,5 +225,93 @@ is
          Header.Length := Model_Length (Values (1));
       end if;
    end Decode_Model_Header_Response;
+
+   ---------------------
+   -- Model Discovery --
+   ---------------------
+
+   -------------------------
+   -- Init_Model_Iterator --
+   -------------------------
+
+   procedure Init_Model_Iterator
+     (Iterator     : out Model_Iterator;
+      Base_Address : Register_Address := Default_Base_Address;
+      Max_Offset   : Register_Address := 1000)
+   is
+   begin
+      Iterator := (Base_Address   => Base_Address,
+                   Current_Offset => 2,  --  Skip SunS identifier
+                   Max_Offset     => Max_Offset,
+                   Is_Valid       => True);
+   end Init_Model_Iterator;
+
+   ----------------------------
+   -- Advance_Model_Iterator --
+   ----------------------------
+
+   procedure Advance_Model_Iterator
+     (Iterator : in out Model_Iterator;
+      Length   : Model_Length)
+   is
+      New_Offset : Register_Address;
+   begin
+      --  Move past header (2) + model data
+      New_Offset := Iterator.Current_Offset + 2 + Register_Address (Length);
+
+      if New_Offset >= Iterator.Max_Offset then
+         Iterator.Is_Valid := False;
+      else
+         Iterator.Current_Offset := New_Offset;
+      end if;
+   end Advance_Model_Iterator;
+
+   ------------------
+   -- Is_End_Model --
+   ------------------
+
+   function Is_End_Model (Header : Model_Header) return Boolean is
+   begin
+      return Header.ID = Model_ID (End_Model_ID);
+   end Is_End_Model;
+
+   ------------------------
+   -- Get_Header_Address --
+   ------------------------
+
+   function Get_Header_Address (Iterator : Model_Iterator) return Register_Address is
+   begin
+      return Iterator.Base_Address + Iterator.Current_Offset;
+   end Get_Header_Address;
+
+   ----------------------
+   -- Get_Data_Address --
+   ----------------------
+
+   function Get_Data_Address
+     (Base_Address : Register_Address;
+      Model_Offset : Register_Address) return Register_Address
+   is
+   begin
+      return Base_Address + Model_Offset + 2;
+   end Get_Data_Address;
+
+   -----------------------
+   -- Is_Inverter_Model --
+   -----------------------
+
+   function Is_Inverter_Model (ID : Model_ID) return Boolean is
+   begin
+      return ID in 101 .. 103;
+   end Is_Inverter_Model;
+
+   --------------------
+   -- Is_Meter_Model --
+   --------------------
+
+   function Is_Meter_Model (ID : Model_ID) return Boolean is
+   begin
+      return ID in 201 .. 204;
+   end Is_Meter_Model;
 
 end Ada_Modbus.Energy.SunSpec;

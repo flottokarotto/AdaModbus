@@ -5,23 +5,7 @@
 package body Ada_Modbus.Energy.SunSpec.Storage
   with SPARK_Mode => On
 is
-
-   --  Helper: Extract signed scale factor from register
-   function To_Scale_Factor (Value : Register_Value) return Scale_Factor is
-      Raw : constant Integer := Integer (Value);
-   begin
-      if Raw > 32767 then
-         if Raw - 65536 >= -10 then
-            return Scale_Factor (Raw - 65536);
-         else
-            return -10;
-         end if;
-      elsif Raw <= 10 then
-         return Scale_Factor (Raw);
-      else
-         return 0;
-      end if;
-   end To_Scale_Factor;
+   --  Note: To_Scale_Factor is now exported from parent package SunSpec
 
    --------------------------------
    -- Encode_Read_Status_Request --

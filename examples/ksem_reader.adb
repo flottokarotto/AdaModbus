@@ -16,6 +16,7 @@
 --           ksem_reader 192.168.1.100 502 1
 
 with Ada.Text_IO; use Ada.Text_IO;
+with Ada.Float_Text_IO;
 with Ada.Command_Line;
 with Ada.Calendar;
 with Ada.Exceptions;
@@ -24,25 +25,28 @@ with Interfaces; use Interfaces;
 with Ada_Modbus;
 with Ada_Modbus.Master;
 with Ada_Modbus.Transport.TCP;
+with Ada_Modbus.Energy.SunSpec;
+with Ada_Modbus.Energy.SunSpec.Common;
+with Ada_Modbus.Energy.SunSpec.Meter;
 
 procedure KSEM_Reader is
 
    use Ada_Modbus;
    use Ada_Modbus.Transport.TCP;
+   use Ada_Modbus.Energy.SunSpec;
+   use Ada_Modbus.Energy.SunSpec.Meter;
 
    --  KSEM default settings
    Default_Port    : constant := 502;
    Default_Unit_Id : constant := 1;
-
-   --  SunSpec base address
-   SunSpec_Base : constant Register_Address := 40000;
+   SunSpec_Base    : constant Register_Address := Default_Base_Address;
 
    --  Connection
    type Connection_Access is access all TCP_Connection;
    Connection : aliased TCP_Connection;
    Conn_Ptr   : constant Connection_Access := Connection'Access;
 
-   --  Transport callbacks
+   --  Transport callbacks for Master generic
    function Send_Data
      (Ctx  : in out Connection_Access;
       Data : Byte_Array) return Natural is
@@ -51,7 +55,7 @@ procedure KSEM_Reader is
    end Send_Data;
 
    function Receive_Data
-     (Ctx        : in Out Connection_Access;
+     (Ctx        : in out Connection_Access;
       Buffer     : out Byte_Array;
       Max_Length : Natural;
       Timeout_Ms : Natural) return Natural is
@@ -75,78 +79,173 @@ procedure KSEM_Reader is
 
    Ctx : Modbus_Master.Master_Context;
 
-   --  Scale factor type for SunSpec
-   type Scale_Factor is range -10 .. 10;
-
-   --  Convert register to signed scale factor
-   function To_Scale_Factor (Reg : Register_Value) return Scale_Factor is
-      Raw : Integer;
+   --  Format float without E notation
+   function Fmt (Value : Float; Decimals : Natural := 2) return String is
+      Result : String (1 .. 20);
    begin
-      if Reg > 32767 then
-         Raw := Integer (Reg) - 65536;
-      else
-         Raw := Integer (Reg);
-      end if;
-      if Raw in -10 .. 10 then
-         return Scale_Factor (Raw);
-      else
-         return 0;
-      end if;
-   end To_Scale_Factor;
-
-   --  Apply scale factor to value
-   function Apply_Scale (Value : Integer; SF : Scale_Factor) return Float is
-      Mult : constant Float := 10.0 ** Integer (SF);
-   begin
-      return Float (Value) * Mult;
-   end Apply_Scale;
-
-   --  Decode string from registers (2 chars per register)
-   function Decode_String (Regs : Register_Array) return String is
-      Result : String (1 .. Regs'Length * 2);
-      Idx    : Natural := 1;
-      Hi, Lo : Character;
-   begin
-      for R of Regs loop
-         Hi := Character'Val (Natural (R / 256) mod 256);
-         Lo := Character'Val (Natural (R mod 256));
-         if Hi /= ASCII.NUL then
-            Result (Idx) := Hi;
-            Idx := Idx + 1;
-         end if;
-         if Lo /= ASCII.NUL then
-            Result (Idx) := Lo;
-            Idx := Idx + 1;
+      Ada.Float_Text_IO.Put (Result, Value, Aft => Decimals, Exp => 0);
+      for I in Result'Range loop
+         if Result (I) /= ' ' then
+            return Result (I .. Result'Last);
          end if;
       end loop;
-      return Result (1 .. Idx - 1);
-   end Decode_String;
+      return Result;
+   end Fmt;
 
-   --  Convert signed 16-bit register to integer
-   function To_Signed (Reg : Register_Value) return Integer is
+   --  Helper: Read registers with error handling
+   function Read_Registers
+     (Slave    : Unit_Id;
+      Address  : Register_Address;
+      Quantity : Natural;
+      Values   : out Register_Array) return Boolean
+   is
+      Result : Status;
    begin
-      if Reg > 32767 then
-         return Integer (Reg) - 65536;
-      else
-         return Integer (Reg);
+      Result := Modbus_Master.Read_Holding_Registers
+        (Ctx, Slave, Address, Register_Count (Quantity), Values);
+      if Result /= Success then
+         Put_Line ("  Error at " & Address'Image & ": " & Result'Image);
+         return False;
       end if;
-   end To_Signed;
+      return True;
+   end Read_Registers;
 
-   --  Check if value is "not implemented" (0x8000 or 0x7FFF)
-   function Is_Not_Implemented (Reg : Register_Value) return Boolean is
+   --  Check SunSpec identifier
+   function Check_SunSpec (Slave : Unit_Id) return Boolean is
+      Values : Register_Array (0 .. 1);
    begin
-      return Reg = 16#8000# or Reg = 16#7FFF# or Reg = 16#FFFF#;
-   end Is_Not_Implemented;
+      if not Read_Registers (Slave, SunSpec_Base, 2, Values) then
+         return False;
+      end if;
+      return Values (0) = SunS_ID_High and Values (1) = SunS_ID_Low;
+   end Check_SunSpec;
 
-   --  Format value with scale, or "N/A" if not implemented
-   function Format_Value (Reg : Register_Value; SF : Scale_Factor; Unit : String) return String is
+   --  Read and display Common Model (Model 1)
+   procedure Read_Common_Model (Slave : Unit_Id; Model_Start : Register_Address)
+   is
+      use Ada_Modbus.Energy.SunSpec.Common;
+      Str_Regs : Register_Array (0 .. 15);
+      Str_Val  : SunSpec_String;
+      Str_Len  : Natural;
    begin
-      if Is_Not_Implemented (Reg) then
+      Put_Line ("--- Device Information (Model 1) ---");
+
+      if Read_Registers (Slave, Model_Start + Reg_Manufacturer, 16, Str_Regs) then
+         Decode_String (Str_Regs, Str_Val, Str_Len);
+         Put_Line ("  Manufacturer: " & Str_Val (1 .. Str_Len));
+      end if;
+
+      if Read_Registers (Slave, Model_Start + Reg_Model, 16, Str_Regs) then
+         Decode_String (Str_Regs, Str_Val, Str_Len);
+         Put_Line ("  Model:        " & Str_Val (1 .. Str_Len));
+      end if;
+
+      if Read_Registers (Slave, Model_Start + Reg_Serial, 16, Str_Regs) then
+         Decode_String (Str_Regs, Str_Val, Str_Len);
+         Put_Line ("  Serial:       " & Str_Val (1 .. Str_Len));
+      end if;
+
+      declare
+         Ver_Regs : Register_Array (0 .. 7);
+      begin
+         if Read_Registers (Slave, Model_Start + Reg_Version, 8, Ver_Regs) then
+            Decode_String (Ver_Regs, Str_Val, Str_Len);
+            Put_Line ("  Version:      " & Str_Val (1 .. Str_Len));
+         end if;
+      end;
+   end Read_Common_Model;
+
+   --  Format value with "N/A" for not-implemented
+   function Format_Float (Value : Float; Decimals : Natural; Unit : String)
+      return String is
+   begin
+      if Value = 0.0 then
          return "N/A";
       else
-         return Float'Image (Apply_Scale (To_Signed (Reg), SF)) & " " & Unit;
+         return Fmt (Value, Decimals) & " " & Unit;
       end if;
-   end Format_Value;
+   end Format_Float;
+
+   --  Read and display Meter Model (201-204)
+   procedure Read_Meter_Model
+     (Slave       : Unit_Id;
+      Model_Start : Register_Address;
+      M_ID        : Natural)
+   is
+      --  Read all registers (need at least 55 for full decode)
+      Meter_Regs : Register_Array (0 .. 54);
+      SF         : Meter_Scale_Factors;
+      Data       : Meter_Data;
+      M_Type     : constant Meter_Type := To_Meter_Type (Model_ID (M_ID));
+   begin
+      New_Line;
+      Put_Line ("--- Meter Readings (Model " & M_ID'Image & ") ---");
+
+      --  Read registers (offset 2 = after header)
+      if not Read_Registers (Slave, Model_Start + 2, 55, Meter_Regs) then
+         Put_Line ("  Failed to read meter registers.");
+         return;
+      end if;
+
+      --  Decode scale factors and data
+      Decode_Meter_Scale_Factors (Meter_Regs, SF);
+      Decode_Meter_Totals (Meter_Regs, SF, M_Type, Data);
+      Decode_Meter_Phases (Meter_Regs, SF, Data);
+
+      --  Display totals
+      Put_Line ("--- Power ---");
+      Put_Line ("  Total:  " & Format_Float (Data.Total_Power, 1, "W"));
+
+      if M_ID >= 203 then
+         Put_Line ("  L1:     " & Format_Float (Data.Phase_A.Power_W, 1, "W"));
+         Put_Line ("  L2:     " & Format_Float (Data.Phase_B.Power_W, 1, "W"));
+         Put_Line ("  L3:     " & Format_Float (Data.Phase_C.Power_W, 1, "W"));
+      end if;
+
+      New_Line;
+      Put_Line ("--- Voltage (L-N) ---");
+      Put_Line ("  Avg:    " & Format_Float (Data.Total_Voltage, 1, "V"));
+
+      if M_ID >= 203 then
+         Put_Line ("  L1:     " & Format_Float (Data.Phase_A.Voltage_V, 1, "V"));
+         Put_Line ("  L2:     " & Format_Float (Data.Phase_B.Voltage_V, 1, "V"));
+         Put_Line ("  L3:     " & Format_Float (Data.Phase_C.Voltage_V, 1, "V"));
+      end if;
+
+      New_Line;
+      Put_Line ("--- Current ---");
+      Put_Line ("  Total:  " & Format_Float (Data.Total_Current, 2, "A"));
+
+      if M_ID >= 203 then
+         Put_Line ("  L1:     " & Format_Float (Data.Phase_A.Current_A, 2, "A"));
+         Put_Line ("  L2:     " & Format_Float (Data.Phase_B.Current_A, 2, "A"));
+         Put_Line ("  L3:     " & Format_Float (Data.Phase_C.Current_A, 2, "A"));
+      end if;
+
+      New_Line;
+      Put_Line ("--- Frequency ---");
+      Put_Line ("  " & Format_Float (Data.Frequency, 2, "Hz"));
+
+      New_Line;
+      Put_Line ("--- Apparent Power ---");
+      Put_Line ("  Total:  " & Format_Float (Data.Total_VA, 1, "VA"));
+
+      New_Line;
+      Put_Line ("--- Reactive Power ---");
+      Put_Line ("  Total:  " & Format_Float (Data.Total_VAR, 1, "var"));
+
+      New_Line;
+      Put_Line ("--- Power Factor ---");
+      Put_Line ("  " & Format_Float (Data.Total_PF, 3, ""));
+
+      --  Energy counters
+      if Data.Total_Exp_Wh > 0.0 or Data.Total_Imp_Wh > 0.0 then
+         New_Line;
+         Put_Line ("--- Energy ---");
+         Put_Line ("  Exported: " & Fmt (Data.Total_Exp_Wh / 1000.0, 2) & " kWh");
+         Put_Line ("  Imported: " & Fmt (Data.Total_Imp_Wh / 1000.0, 2) & " kWh");
+      end if;
+   end Read_Meter_Model;
 
    --  Main variables
    Host     : String (1 .. 64) := [others => ' '];
@@ -159,7 +258,6 @@ begin
    Put_Line ("=== Kostal Smart Energy Meter (KSEM) Reader ===");
    New_Line;
 
-   --  Parse command line
    if Ada.Command_Line.Argument_Count < 1 then
       Put_Line ("Usage: ksem_reader <ip-address> [port] [unit-id]");
       Put_Line ("  Default port: 502");
@@ -185,7 +283,6 @@ begin
    Put_Line ("Connecting to " & Host (1 .. Host_Len) &
              ":" & Port'Image & " (Unit " & Unit'Image & ")...");
 
-   --  Connect
    Connect (Connection, Host (1 .. Host_Len), Port, 5.0, Result);
    if Result /= Success then
       Put_Line ("Connection failed: " & Result'Image);
@@ -194,232 +291,66 @@ begin
    Put_Line ("Connected.");
    New_Line;
 
-   --  Initialize master
    Modbus_Master.Initialize
      (Ctx,
       (Mode => Modbus_Master.TCP, Default_Slave => Unit, Default_Timeout => 3000),
       Conn_Ptr);
 
-   --  Check for SunSpec marker
-   declare
-      Regs : Register_Array (0 .. 1);
-   begin
-      Result := Modbus_Master.Read_Holding_Registers
-        (Ctx, Unit, SunSpec_Base, 2, Regs);
-      if Result /= Success then
-         Put_Line ("Failed to read SunSpec base: " & Result'Image);
-         Disconnect (Connection);
-         return;
-      end if;
-
-      if Regs (0) /= 16#5375# or Regs (1) /= 16#6E53# then
-         Put_Line ("SunSpec marker not found!");
-         Put_Line ("Got: " & Regs (0)'Image & ", " & Regs (1)'Image);
-         Disconnect (Connection);
-         return;
-      end if;
-      Put_Line ("SunSpec protocol detected.");
-   end;
-
-   --  Read Common Block (Model 1) at 40002
-   Put_Line ("--- Device Information ---");
-   declare
-      Common_Base : constant Register_Address := SunSpec_Base + 2;
-      Regs : Register_Array (0 .. 65);
-      Model_Id : Register_Value;
-      Block_Len : Register_Value;
-   begin
-      --  Read model header
-      Result := Modbus_Master.Read_Holding_Registers
-        (Ctx, Unit, Common_Base, 2, Regs (0 .. 1));
-      if Result /= Success then
-         Put_Line ("Failed to read Common block header: " & Result'Image);
-      else
-         Model_Id := Regs (0);
-         Block_Len := Regs (1);
-         Put_Line ("  Model: " & Model_Id'Image & " (Common)");
-         Put_Line ("  Block Length: " & Block_Len'Image);
-
-         --  Read Common block data (manufacturer, model, etc.)
-         if Block_Len <= 64 then
-            Result := Modbus_Master.Read_Holding_Registers
-              (Ctx, Unit, Common_Base + 2, Register_Count (Block_Len), Regs (0 .. Natural (Block_Len) - 1));
-            if Result = Success then
-               --  Manufacturer: offset 0, length 16
-               Put_Line ("  Manufacturer: " & Decode_String (Regs (0 .. 15)));
-               --  Model: offset 16, length 16
-               Put_Line ("  Model: " & Decode_String (Regs (16 .. 31)));
-               --  Serial: offset 48, length 16
-               Put_Line ("  Serial: " & Decode_String (Regs (48 .. 63)));
-            end if;
-         end if;
-      end if;
-   end;
-
-   --  Find and read Meter model (201-204)
+   Put ("Checking SunSpec identifier... ");
+   if not Check_SunSpec (Unit) then
+      Put_Line ("Not found!");
+      Put_Line ("Make sure Modbus TCP Slave is enabled in KSEM settings.");
+      Disconnect (Connection);
+      return;
+   end if;
+   Put_Line ("OK (SunS found at 40000)");
    New_Line;
-   Put_Line ("--- Searching for Meter Model ---");
+
+   --  Walk through models using library iterator
    declare
-      Current_Addr : Register_Address := SunSpec_Base + 2;  --  Start after "SunS"
-      Regs : Register_Array (0 .. 124);
-      Model_Id : Register_Value;
-      Block_Len : Register_Value;
-      Found_Meter : Boolean := False;
-      Max_Models : constant := 20;
+      Iterator     : Model_Iterator;
+      Header       : Register_Array (0 .. 1);
+      Found_Meter  : Boolean := False;
    begin
-      for Model_Count in 1 .. Max_Models loop
-         Result := Modbus_Master.Read_Holding_Registers
-           (Ctx, Unit, Current_Addr, 2, Regs (0 .. 1));
-         if Result /= Success then
-            Put_Line ("Read error at " & Current_Addr'Image);
+      Init_Model_Iterator (Iterator, SunSpec_Base);
+
+      while Iterator.Is_Valid and Iterator.Current_Offset < 500 loop
+         if not Read_Registers (Unit, Get_Header_Address (Iterator), 2, Header) then
             exit;
          end if;
 
-         Model_Id := Regs (0);
-         Block_Len := Regs (1);
+         exit when Header (0) = End_Model_ID;
 
-         --  End marker
-         if Model_Id = 16#FFFF# then
-            Put_Line ("  End of SunSpec models.");
-            exit;
-         end if;
+         declare
+            M_ID    : constant Natural := Natural (Header (0));
+            M_Len   : constant Natural := Natural (Header (1));
+            M_Start : constant Register_Address := Get_Header_Address (Iterator);
+         begin
+            case M_ID is
+               when Model_Common =>
+                  Read_Common_Model (Unit, M_Start);
 
-         Put_Line ("  Found Model " & Model_Id'Image &
-                   " at " & Current_Addr'Image &
-                   " (len " & Block_Len'Image & ")");
+               when Model_Meter_1P | Model_Meter_SP |
+                    Model_Meter_3P_Wye | Model_Meter_3P_Delta =>
+                  Read_Meter_Model (Unit, M_Start, M_ID);
+                  Found_Meter := True;
 
-         --  Meter models: 201 (single-phase), 202 (split-phase),
-         --                203 (wye 3-phase), 204 (delta 3-phase)
-         if Model_Id in 201 .. 204 then
-            Found_Meter := True;
-            Put_Line ("  -> Meter model found!");
+               when others =>
+                  Put_Line ("  Found Model " & M_ID'Image &
+                            " at " & M_Start'Image & " (len " & M_Len'Image & ")");
+            end case;
 
-            --  Read meter data
-            if Block_Len <= 124 then
-               Result := Modbus_Master.Read_Holding_Registers
-                 (Ctx, Unit, Current_Addr + 2, Register_Count (Block_Len),
-                  Regs (0 .. Natural (Block_Len) - 1));
-
-               if Result = Success then
-                  New_Line;
-                  Put_Line ("--- Meter Readings (Model " & Model_Id'Image & ") ---");
-
-                  --  SunSpec Meter Model 203 layout:
-                  --  Offset 0: A (Total Current) - int16, SF at offset 2
-                  --  Offset 1: AphA (Phase A Current)
-                  --  Offset 2: AphB
-                  --  Offset 3: AphC
-                  --  Offset 4: A_SF (Current scale factor)
-                  --  Offset 5: PhV (Voltage L-N avg)
-                  --  Offset 6: PhVphA
-                  --  Offset 7: PhVphB
-                  --  Offset 8: PhVphC
-                  --  Offset 9: PPV (Voltage L-L avg)
-                  --  ...
-                  --  Offset 14: V_SF
-                  --  Offset 15: Hz
-                  --  Offset 16: Hz_SF
-                  --  Offset 17: W (Total Active Power)
-                  --  Offset 18: WphA
-                  --  Offset 19: WphB
-                  --  Offset 20: WphC
-                  --  Offset 21: W_SF
-                  --  Offset 22: VA (Total Apparent Power)
-                  --  ...
-                  --  Offset 26: VA_SF
-                  --  Offset 27: VAR (Total Reactive Power)
-                  --  ...
-                  --  Offset 31: VAR_SF
-                  --  Offset 32: PF
-                  --  ...
-                  --  Offset 36: PF_SF
-                  --  Offset 37: TotWhExp (Total Wh Exported) - uint32
-                  --  Offset 39: TotWhImp (Total Wh Imported) - uint32
-                  --  ...
-                  --  Offset 53: TotWh_SF
-
-                  --  SunSpec Model 203 offsets (corrected):
-                  --    0: A (Total Current), 1-3: AphA/B/C, 4: A_SF
-                  --    5: PhV (L-N avg), 6-8: PhVphA/B/C
-                  --    9: PPV (L-L avg), 10-12: PPVphAB/BC/CA
-                  --   13: V_SF
-                  --   14: Hz, 15: Hz_SF
-                  --   16: W (Total), 17-19: WphA/B/C, 20: W_SF
-                  --   21: VA (Total), 22-24: VAphA/B/C, 25: VA_SF
-                  --   26: VAR (Total), 27-29: VARphA/B/C, 30: VAR_SF
-                  --   31: PF (Total), 32-34: PFphA/B/C, 35: PF_SF
-                  --   36-37: TotWhExp (uint32), 38-39: TotWhExpPhA, ...
-                  --   52-53: TotWhImp (uint32), 54-55: TotWhImpPhA, ...
-                  --   68: TotWh_SF
-
-                  declare
-                     A_SF   : constant Scale_Factor := To_Scale_Factor (Regs (4));
-                     V_SF   : constant Scale_Factor := To_Scale_Factor (Regs (13));
-                     Hz_SF  : constant Scale_Factor := To_Scale_Factor (Regs (15));
-                     W_SF   : constant Scale_Factor := To_Scale_Factor (Regs (20));
-                     VA_SF  : constant Scale_Factor := To_Scale_Factor (Regs (25));
-                     VAR_SF : constant Scale_Factor := To_Scale_Factor (Regs (30));
-                     PF_SF  : constant Scale_Factor := To_Scale_Factor (Regs (35));
-                  begin
-
-                     Put_Line ("--- Power ---");
-                     Put_Line ("  Total:  " & Format_Value (Regs (16), W_SF, "W"));
-                     if Model_Id >= 203 then
-                        Put_Line ("  L1:     " & Format_Value (Regs (17), W_SF, "W"));
-                        Put_Line ("  L2:     " & Format_Value (Regs (18), W_SF, "W"));
-                        Put_Line ("  L3:     " & Format_Value (Regs (19), W_SF, "W"));
-                     end if;
-
-                     New_Line;
-                     Put_Line ("--- Voltage (L-N) ---");
-                     Put_Line ("  Avg:    " & Format_Value (Regs (5), V_SF, "V"));
-                     if Model_Id >= 203 then
-                        Put_Line ("  L1:     " & Format_Value (Regs (6), V_SF, "V"));
-                        Put_Line ("  L2:     " & Format_Value (Regs (7), V_SF, "V"));
-                        Put_Line ("  L3:     " & Format_Value (Regs (8), V_SF, "V"));
-                     end if;
-
-                     New_Line;
-                     Put_Line ("--- Current ---");
-                     Put_Line ("  Total:  " & Format_Value (Regs (0), A_SF, "A"));
-                     if Model_Id >= 203 then
-                        Put_Line ("  L1:     " & Format_Value (Regs (1), A_SF, "A"));
-                        Put_Line ("  L2:     " & Format_Value (Regs (2), A_SF, "A"));
-                        Put_Line ("  L3:     " & Format_Value (Regs (3), A_SF, "A"));
-                     end if;
-
-                     New_Line;
-                     Put_Line ("--- Frequency ---");
-                     Put_Line ("  " & Format_Value (Regs (14), Hz_SF, "Hz"));
-
-                     New_Line;
-                     Put_Line ("--- Apparent Power ---");
-                     Put_Line ("  Total:  " & Format_Value (Regs (21), VA_SF, "VA"));
-
-                     New_Line;
-                     Put_Line ("--- Reactive Power ---");
-                     Put_Line ("  Total:  " & Format_Value (Regs (26), VAR_SF, "var"));
-
-                     New_Line;
-                     Put_Line ("--- Power Factor ---");
-                     Put_Line ("  " & Format_Value (Regs (31), PF_SF, ""));
-
-                     --  Note: Energy counters in SunSpec Model 203 may not be
-                     --  implemented correctly by all devices. The KSEM may store
-                     --  energy data in different registers. Check device docs.
-                  end;
-               end if;
-            end if;
-            exit;  --  Found meter, done
-         end if;
-
-         --  Move to next model
-         Current_Addr := Current_Addr + 2 + Register_Address (Block_Len);
+            Advance_Model_Iterator (Iterator, Model_Length (M_Len));
+         end;
       end loop;
 
       if not Found_Meter then
+         New_Line;
          Put_Line ("No meter model (201-204) found.");
       end if;
+
+      New_Line;
+      Put_Line ("--- End of Model List ---");
    end;
 
    New_Line;
