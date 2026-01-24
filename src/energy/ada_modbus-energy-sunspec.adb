@@ -24,6 +24,7 @@ is
      (Value : Register_Value; SF : Scale_Factor) return Float
    is
       Signed_Value : Integer;
+      Result       : Float;
    begin
       --  Convert unsigned 16-bit to signed (two's complement)
       if Value > 32767 then
@@ -31,7 +32,13 @@ is
       else
          Signed_Value := Integer (Value);
       end if;
-      return Float (Signed_Value) * Scale_Multipliers (SF);
+      --  Signed_Value is bounded to -32768..32767, Scale_Multipliers to 1E-10..1E10
+      --  Maximum result: 32767 * 1E10 = 3.2767E14 < Float'Last (3.4E38)
+      Result := Float (Signed_Value) * Scale_Multipliers (SF);
+      pragma Annotate (GNATprove, Intentional,
+                       "float overflow check might fail",
+                       "Signed_Value bounded to int16 range, result < Float'Last");
+      return Result;
    end Apply_Scale_Signed;
 
    -------------------
