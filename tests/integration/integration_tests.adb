@@ -55,12 +55,19 @@ package body Integration_Tests is
       return Receive (Ctx.all, Buffer, Max_Length, Timeout_Ms);
    end Receive_Data;
 
+   Start_Time : Ada.Calendar.Time;
+   Start_Time_Set : Boolean := False;
+
    function Get_Tick return Unsigned_32 is
       use Ada.Calendar;
-      Now     : constant Time := Clock;
-      Seconds : constant Duration := Now - Time_Of (1970, 1, 1, 0.0);
+      Elapsed : Duration;
    begin
-      return Unsigned_32 (Seconds * 1000.0) mod Unsigned_32'Last;
+      if not Start_Time_Set then
+         Start_Time := Clock;
+         Start_Time_Set := True;
+      end if;
+      Elapsed := Clock - Start_Time;
+      return Unsigned_32 (Elapsed * 1000.0);
    end Get_Tick;
 
    --  Instantiate Master with TCP transport

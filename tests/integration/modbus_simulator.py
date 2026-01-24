@@ -28,33 +28,36 @@ from typing import Optional
 try:
     from pymodbus.datastore import (
         ModbusSequentialDataBlock,
-        ModbusSlaveContext,
+        ModbusDeviceContext,
         ModbusServerContext,
     )
     from pymodbus.server import StartTcpServer
-    from pymodbus.device import ModbusDeviceIdentification
-    from pymodbus.version import version as pymodbus_version
-except ImportError:
-    print("Error: pymodbus is not installed.")
+    from pymodbus import __version__ as pymodbus_version
+except ImportError as e:
+    print(f"Error: pymodbus is not installed.")
     print("Install it with: pip install pymodbus")
     sys.exit(1)
 
 
 # Test data configuration
 # These values are used to verify correct read/write operations
+#
+# NOTE: pymodbus 3.x uses 1-based internal addressing, so we prepend a dummy
+# value to align Modbus address 0 with array index 1.
 
 # Coils (FC 01/05/15) - Address 0-99
 # Pattern: alternating on/off starting at address 0
-COILS_INITIAL = [i % 2 == 0 for i in range(100)]
+COILS_INITIAL = [False] + [i % 2 == 0 for i in range(100)]  # dummy + data
 
 # Discrete Inputs (FC 02) - Address 0-99
 # Pattern: every 3rd bit is set
-DISCRETE_INPUTS = [i % 3 == 0 for i in range(100)]
+DISCRETE_INPUTS = [False] + [i % 3 == 0 for i in range(100)]  # dummy + data
 
 # Holding Registers (FC 03/06/16/22/23) - Address 0-199
 # Pattern: address * 100 (e.g., addr 0 = 0, addr 1 = 100, addr 10 = 1000)
 # Special values at specific addresses for test verification
 HOLDING_REGISTERS_INITIAL = [
+    0x0000,  # dummy for 1-based addressing
     # Address 0-9: Sequential pattern
     0x0000, 0x0064, 0x00C8, 0x012C, 0x0190,  # 0, 100, 200, 300, 400
     0x01F4, 0x0258, 0x02BC, 0x0320, 0x0384,  # 500, 600, 700, 800, 900
@@ -66,11 +69,11 @@ HOLDING_REGISTERS_INITIAL = [
     0x0001, 0x0042,  # Model ID 1, Length 66
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
     # Address 30-99: Zero-initialized
-] + [0] * 170  # Pad to 200 registers
+] + [0] * 170  # Pad to 201 registers (1 dummy + 200 data)
 
 # Input Registers (FC 04) - Address 0-199
 # Pattern: address + 1000 (e.g., addr 0 = 1000, addr 1 = 1001)
-INPUT_REGISTERS = [i + 1000 for i in range(200)]
+INPUT_REGISTERS = [0] + [i + 1000 for i in range(200)]  # dummy + data
 
 
 class ModbusSimulator:
@@ -100,29 +103,18 @@ class ModbusSimulator:
         holding_registers = ModbusSequentialDataBlock(0, HOLDING_REGISTERS_INITIAL.copy())
         input_registers = ModbusSequentialDataBlock(0, INPUT_REGISTERS)
 
-        # Create slave context
-        store = ModbusSlaveContext(
+        # Create device context (was ModbusSlaveContext in pymodbus 2.x)
+        store = ModbusDeviceContext(
             di=discrete_inputs,    # FC 02
             co=coils,              # FC 01/05/15
             hr=holding_registers,  # FC 03/06/16/22/23
             ir=input_registers,    # FC 04
         )
 
-        # Create server context with single slave
-        context = ModbusServerContext(slaves={self.unit_id: store}, single=False)
+        # Create server context with single device (slaves→devices in pymodbus 3.x)
+        context = ModbusServerContext(devices={self.unit_id: store}, single=False)
 
         return context
-
-    def create_identity(self) -> ModbusDeviceIdentification:
-        """Create device identification for FC 17 (Report Server ID)."""
-        identity = ModbusDeviceIdentification()
-        identity.VendorName = "AdaModbus Test"
-        identity.ProductCode = "TEST-001"
-        identity.VendorUrl = "https://github.com/your-repo/adamodbus"
-        identity.ProductName = "Modbus Simulator"
-        identity.ModelName = "Integration Test Server"
-        identity.MajorMinorRevision = "1.0.0"
-        return identity
 
     def run(self):
         """Start the Modbus TCP server (blocking)."""
@@ -142,14 +134,12 @@ class ModbusSimulator:
         self.log.info("-" * 50)
 
         context = self.create_datastore()
-        identity = self.create_identity()
 
         self._running = True
 
         try:
             StartTcpServer(
                 context=context,
-                identity=identity,
                 address=("0.0.0.0", self.port),
             )
         except KeyboardInterrupt:

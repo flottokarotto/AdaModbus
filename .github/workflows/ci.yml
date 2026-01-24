@@ -89,12 +89,15 @@ jobs:
           python-version: '3.11'
 
       - name: Install pymodbus
-        run: ${{ env.pythonLocation }}/bin/pip install pymodbus
+        run: |
+          python3 -m pip install pymodbus
+          python3 -c "from pymodbus.server import StartTcpServer; print('Import OK')"
 
       - name: Start Modbus Simulator
         run: |
-          ${{ env.pythonLocation }}/bin/python3 tests/integration/modbus_simulator.py --port 5020 &
+          nohup python3 tests/integration/modbus_simulator.py --port 5020 > simulator.log 2>&1 &
           sleep 2
+          cat simulator.log || true
 
       - name: Build integration tests
         run: alr exec -- gprbuild -P tests/integration/integration_tests.gpr
