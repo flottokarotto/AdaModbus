@@ -21,6 +21,14 @@ Ada 2022 Modbus library for embedded and desktop systems.
 - **Cross-platform**: Works on Windows, Linux, and embedded systems
 - **Transport abstraction**: Generic design allows custom transport backends
 
+## Who is this for?
+
+- **Embedded developers** building industrial devices, PLCs, or IoT gateways that need reliable Modbus communication with minimal runtime overhead
+- **Energy system integrators** connecting solar inverters, battery storage, and smart meters using SunSpec profiles
+- **Industrial automation engineers** who need a formally verified protocol stack for safety-critical applications
+- **Ada/SPARK enthusiasts** looking for a modern, well-documented Modbus implementation
+- **C/C++ developers** who want a battle-tested Modbus library without writing Ada code (via C API)
+
 ## Supported Function Codes
 
 | Code | Function                     | Master | Slave |
