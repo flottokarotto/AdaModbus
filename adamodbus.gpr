@@ -22,6 +22,8 @@ project Adamodbus is
    for Library_Interface use
      ("Ada_Modbus",
       "Ada_Modbus.C_API",
+      "Ada_Modbus.C_API.SunSpec",
+      "Ada_Modbus.C_API.Serial",
       "Ada_Modbus.CRC16",
       "Ada_Modbus.LRC",
       "Ada_Modbus.Utilities",
