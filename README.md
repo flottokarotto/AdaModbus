@@ -299,10 +299,16 @@ end;
 ./bin/ksem_dashboard <ip> [port] [unit]    # Live terminal dashboard
 ```
 
-<p align="center">
-  <img src="docs/screenshots/kostal_dashboard.png" alt="Kostal Inverter Dashboard" width="480">
-  <img src="docs/screenshots/ksem_dashboard.png" alt="KSEM Energy Meter Dashboard" width="480">
-</p>
+<table>
+  <tr>
+    <td><img src="docs/screenshots/kostal_dashboard.png" alt="Kostal Inverter Dashboard" width="400"></td>
+    <td><img src="docs/screenshots/ksem_dashboard.png" alt="KSEM Energy Meter Dashboard" width="400"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Kostal Inverter Dashboard</em></td>
+    <td align="center"><em>KSEM Energy Meter Dashboard</em></td>
+  </tr>
+</table>
 
 ### C Examples
 
