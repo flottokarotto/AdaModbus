@@ -54,8 +54,11 @@ jobs:
 
       - name: Validate SunSpec offsets
         run: |
+          python3 tools/sunspec_codegen.py --validate 1 src/energy/ada_modbus-energy-sunspec-common.ads
           python3 tools/sunspec_codegen.py --validate 103 src/energy/ada_modbus-energy-sunspec-inverter.ads
+          python3 tools/sunspec_codegen.py --validate 124 src/energy/ada_modbus-energy-sunspec-storage.ads
           python3 tools/sunspec_codegen.py --validate 203 src/energy/ada_modbus-energy-sunspec-meter.ads
+          # Note: Model 160 (MPPT) has repeating groups, needs manual validation
 
       - name: Build examples
         run: alr exec -- gprbuild -P examples/examples.gpr
