@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-01-25
+
+### Added
+
+- **Release automation**: GitHub Actions workflow for automated binary releases
+- **Release script**: `tools/create_release.sh` for local release builds
+- **Project status**: README section with maturity levels per component
+
+### Changed
+
+- **Documentation**: Added transparency about testing status (TCP well tested, RTU limited, embedded experimental)
+
 ## [1.1.0] - 2026-01-25
 
 ### Added
@@ -90,5 +102,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 32-bit word order support (ABCD, CDAB, BADC, DCBA)
 - Signed scale factor support for SunSpec
 
+[1.1.1]: https://github.com/flottokarotto/AdaModbus/releases/tag/v1.1.1
 [1.1.0]: https://github.com/flottokarotto/AdaModbus/releases/tag/v1.1.0
 [1.0.0]: https://github.com/flottokarotto/AdaModbus/releases/tag/v1.0.0

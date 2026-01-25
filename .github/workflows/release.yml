@@ -1,0 +1,137 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  ALIRE_VERSION: 2.1.0
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Alire
+        uses: alire-project/setup-alire@v3
+        with:
+          version: ${{ env.ALIRE_VERSION }}
+          toolchain: gnat_native^15
+          cache: true
+
+      - name: Build library (release)
+        run: alr build -- -XADAMODBUS_BUILD_MODE=release
+
+      - name: Build examples (release)
+        run: alr exec -- gprbuild -P examples/examples.gpr -XADAMODBUS_BUILD_MODE=release
+
+      - name: Create Windows x64 package
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+
+          # Examples + C API
+          New-Item -ItemType Directory -Force -Path release/windows-x64/bin
+          New-Item -ItemType Directory -Force -Path release/windows-x64/c-api/include
+          New-Item -ItemType Directory -Force -Path release/windows-x64/c-api/lib
+          Copy-Item bin/*.exe release/windows-x64/bin/
+          Copy-Item src/c_api/*.h release/windows-x64/c-api/include/
+          Copy-Item lib/libadamodbus.a release/windows-x64/c-api/lib/
+          Compress-Archive -Path release/windows-x64/* -DestinationPath "adamodbus-$version-windows-x64.zip"
+
+          # Ada library
+          New-Item -ItemType Directory -Force -Path release/ada-lib/lib
+          New-Item -ItemType Directory -Force -Path release/ada-lib/include
+          Copy-Item lib/libadamodbus.a release/ada-lib/lib/
+          Copy-Item lib/*.ali release/ada-lib/lib/
+          Copy-Item src/core/*.ads release/ada-lib/include/
+          Copy-Item src/transport/*.ads release/ada-lib/include/
+          Copy-Item src/energy/*.ads release/ada-lib/include/
+          Copy-Item src/c_api/*.ads release/ada-lib/include/ -ErrorAction SilentlyContinue
+          Compress-Archive -Path release/ada-lib/* -DestinationPath "adamodbus-$version-ada-windows-x64.zip"
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-packages
+          path: "*.zip"
+
+  build-arm:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Alire
+        uses: alire-project/setup-alire@v3
+        with:
+          version: ${{ env.ALIRE_VERSION }}
+          toolchain: gnat_arm_elf^15
+          cache: true
+
+      - name: Select ARM toolchain
+        run: alr toolchain --select gnat_arm_elf^15 gprbuild
+
+      - name: Build embedded examples
+        run: |
+          cd examples/embedded/cortex_m4_lwip && alr build
+          cd ../stm32_rtu && alr build
+          alr exec -- gprbuild -P stm32_rtu.gpr -XMAIN=slave
+          alr exec -- gprbuild -P stm32_rtu.gpr -XMAIN=master
+
+      - name: Create ARM package
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          mkdir -p release/arm
+          cp examples/embedded/cortex_m4_lwip/bin/*.elf release/arm/ || true
+          cp examples/embedded/stm32_rtu/bin/*.elf release/arm/ || true
+          cd release/arm && zip -r "../../adamodbus-$VERSION-arm-cortexm4.zip" *.elf
+
+      - name: Upload ARM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: arm-packages
+          path: "*.zip"
+
+  create-release:
+    needs: [build-windows, build-arm]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la *.zip
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          # Extract section for this version from CHANGELOG.md
+          awk "/## \[$VERSION\]/{flag=1; next} /## \[/{flag=0} flag" CHANGELOG.md > release_notes.md
+          cat release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "*.zip"
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
