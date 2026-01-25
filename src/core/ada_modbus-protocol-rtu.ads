@@ -25,6 +25,9 @@ is
    subtype ADU_Index is Natural range 0 .. Max_ADU_Size - 1;
    subtype ADU_Buffer is Byte_Array (0 .. Max_ADU_Size - 1);
 
+   --  ADU data length (for parameters, not indices)
+   subtype ADU_Data_Length is Natural range 0 .. Max_ADU_Size;
+
    --  Build RTU frame from PDU
    --  Adds slave address at front and CRC at end
    procedure Build_Frame
@@ -32,21 +35,19 @@ is
       ADU_Length  : out Natural;
       Slave       : Unit_Id;
       PDU         : PDU_Buffer;
-      PDU_Length  : Natural)
-     with Pre => PDU_Length <= Max_PDU_Size
-                 and then PDU_Length + 3 <= Max_ADU_Size,
+      PDU_Length  : PDU_Data_Length)
+     with Pre  => PDU_Length + 3 <= Max_ADU_Size,
           Post => ADU_Length = PDU_Length + 3;
 
    --  Parse RTU frame, extract PDU
    --  Verifies CRC and extracts slave address and PDU
    procedure Parse_Frame
      (ADU        : ADU_Buffer;
-      ADU_Length : Natural;
+      ADU_Length : ADU_Data_Length;
       Slave      : out Unit_Id;
       PDU        : out PDU_Buffer;
       PDU_Length : out Natural;
-      Result     : out Status)
-     with Pre => ADU_Length <= Max_ADU_Size;
+      Result     : out Status);
 
    --  Verify CRC of a complete RTU frame
    function Verify_CRC (ADU : Byte_Array) return Boolean

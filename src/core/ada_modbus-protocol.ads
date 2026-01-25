@@ -21,6 +21,9 @@ is
    subtype PDU_Index is Natural range 0 .. Max_PDU_Size - 1;
    subtype PDU_Buffer is Byte_Array (0 .. Max_PDU_Size - 1);
 
+   --  PDU data length (for parameters, not indices)
+   subtype PDU_Data_Length is Natural range 0 .. Max_PDU_Size;
+
    --  Exception code in response (function code + 0x80)
    function Is_Exception_Response (FC : Function_Code) return Boolean is
      (FC >= 16#80#);
@@ -109,51 +112,46 @@ is
    --  Response: FC(1) + ByteCount(1) + CoilStatus(n)
    procedure Decode_Read_Bits_Response
      (Buffer   : PDU_Buffer;
-      Length   : Natural;
+      Length   : PDU_Data_Length;
       Values   : out Coil_Array;
       Count    : out Natural;
       Response : out Status)
-     with Pre => Length <= Max_PDU_Size
-                 and then Values'Length <= 2000;
+     with Pre => Values'Length <= 2000;
 
    --  Read Holding Registers / Read Input Registers Response
    --  Response: FC(1) + ByteCount(1) + RegisterValues(2*n)
    procedure Decode_Read_Registers_Response
      (Buffer   : PDU_Buffer;
-      Length   : Natural;
+      Length   : PDU_Data_Length;
       Values   : out Register_Array;
       Count    : out Natural;
       Response : out Status)
-     with Pre => Length <= Max_PDU_Size
-                 and then Values'Length <= 125;
+     with Pre => Values'Length <= 125;
 
    --  Write Single Coil / Write Single Register Response (echo)
    --  Response: FC(1) + Address(2) + Value(2) = 5 bytes
    procedure Decode_Write_Single_Response
      (Buffer   : PDU_Buffer;
-      Length   : Natural;
+      Length   : PDU_Data_Length;
       Address  : out Register_Address;
       Value    : out Register_Value;
-      Response : out Status)
-     with Pre => Length <= Max_PDU_Size;
+      Response : out Status);
 
    --  Write Multiple Response
    --  Response: FC(1) + Start(2) + Quantity(2) = 5 bytes
    procedure Decode_Write_Multiple_Response
      (Buffer        : PDU_Buffer;
-      Length        : Natural;
+      Length        : PDU_Data_Length;
       Start_Address : out Register_Address;
       Quantity      : out Natural;
-      Response      : out Status)
-     with Pre => Length <= Max_PDU_Size;
+      Response      : out Status);
 
    --  Exception Response
    --  Response: FC+0x80(1) + ExceptionCode(1) = 2 bytes
    procedure Decode_Exception_Response
      (Buffer   : PDU_Buffer;
-      Length   : Natural;
-      Response : out Status)
-     with Pre => Length <= Max_PDU_Size;
+      Length   : PDU_Data_Length;
+      Response : out Status);
 
    -----------------------------------
    --  Diagnostic Function Codes   --
@@ -169,10 +167,9 @@ is
    --  Response: FC(1) + ExceptionStatus(1) = 2 bytes
    procedure Decode_Read_Exception_Status_Response
      (Buffer           : PDU_Buffer;
-      Length           : Natural;
+      Length           : PDU_Data_Length;
       Exception_Status : out Byte;
-      Response         : out Status)
-     with Pre => Length <= Max_PDU_Size;
+      Response         : out Status);
 
    --  Diagnostics (FC 08)
    --  Request: FC(1) + SubFunction(2) + Data(2) = 5 bytes
@@ -186,11 +183,10 @@ is
    --  Response: FC(1) + SubFunction(2) + Data(2) = 5 bytes
    procedure Decode_Diagnostics_Response
      (Buffer       : PDU_Buffer;
-      Length       : Natural;
+      Length       : PDU_Data_Length;
       Sub_Function : out Interfaces.Unsigned_16;
       Data         : out Interfaces.Unsigned_16;
-      Response     : out Status)
-     with Pre => Length <= Max_PDU_Size;
+      Response     : out Status);
 
    --  Report Server ID (FC 17)
    --  Request: FC(1) = 1 byte
@@ -202,14 +198,13 @@ is
    --  Response: FC(1) + ByteCount(1) + ServerID(1) + RunIndicator(1) + Data(n)
    procedure Decode_Report_Server_Id_Response
      (Buffer        : PDU_Buffer;
-      Length        : Natural;
+      Length        : PDU_Data_Length;
       Server_Id     : out Byte;
       Run_Indicator : out Boolean;
       Add_Data      : out Byte_Array;
       Add_Data_Len  : out Natural;
       Response      : out Status)
-     with Pre => Length <= Max_PDU_Size
-                 and then Add_Data'Length <= Max_PDU_Size;
+     with Pre => Add_Data'Length <= Max_PDU_Size;
 
    --  Mask Write Register (FC 22)
    --  Request: FC(1) + Address(2) + And_Mask(2) + Or_Mask(2) = 7 bytes
@@ -224,12 +219,11 @@ is
    --  Mask Write Register Response (echo)
    procedure Decode_Mask_Write_Register_Response
      (Buffer   : PDU_Buffer;
-      Length   : Natural;
+      Length   : PDU_Data_Length;
       Address  : out Register_Address;
       And_Mask : out Register_Value;
       Or_Mask  : out Register_Value;
-      Response : out Status)
-     with Pre => Length <= Max_PDU_Size;
+      Response : out Status);
 
    --  Read/Write Multiple Registers (FC 23)
    --  Request: FC(1) + ReadStart(2) + ReadQty(2) + WriteStart(2) + WriteQty(2)
@@ -249,11 +243,10 @@ is
    --  Response: FC(1) + ByteCount(1) + ReadValues(2*n)
    procedure Decode_Read_Write_Registers_Response
      (Buffer   : PDU_Buffer;
-      Length   : Natural;
+      Length   : PDU_Data_Length;
       Values   : out Register_Array;
       Count    : out Natural;
       Response : out Status)
-     with Pre => Length <= Max_PDU_Size
-                 and then Values'Length <= 125;
+     with Pre => Values'Length <= 125;
 
 end Ada_Modbus.Protocol;

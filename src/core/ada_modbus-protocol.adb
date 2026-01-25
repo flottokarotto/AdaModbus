@@ -234,7 +234,7 @@ is
 
    procedure Decode_Read_Bits_Response
      (Buffer   : PDU_Buffer;
-      Length   : Natural;
+      Length : PDU_Data_Length;
       Values   : out Coil_Array;
       Count    : out Natural;
       Response : out Status)
@@ -286,7 +286,7 @@ is
 
    procedure Decode_Read_Registers_Response
      (Buffer   : PDU_Buffer;
-      Length   : Natural;
+      Length : PDU_Data_Length;
       Values   : out Register_Array;
       Count    : out Natural;
       Response : out Status)
@@ -334,7 +334,7 @@ is
 
    procedure Decode_Write_Single_Response
      (Buffer   : PDU_Buffer;
-      Length   : Natural;
+      Length : PDU_Data_Length;
       Address  : out Register_Address;
       Value    : out Register_Value;
       Response : out Status)
@@ -365,7 +365,7 @@ is
 
    procedure Decode_Write_Multiple_Response
      (Buffer        : PDU_Buffer;
-      Length        : Natural;
+      Length : PDU_Data_Length;
       Start_Address : out Register_Address;
       Quantity      : out Natural;
       Response      : out Status)
@@ -396,7 +396,7 @@ is
 
    procedure Decode_Exception_Response
      (Buffer   : PDU_Buffer;
-      Length   : Natural;
+      Length : PDU_Data_Length;
       Response : out Status)
    is
    begin
@@ -428,7 +428,7 @@ is
 
    procedure Decode_Read_Exception_Status_Response
      (Buffer           : PDU_Buffer;
-      Length           : Natural;
+      Length : PDU_Data_Length;
       Exception_Status : out Byte;
       Response         : out Status)
    is
@@ -478,7 +478,7 @@ is
 
    procedure Decode_Diagnostics_Response
      (Buffer       : PDU_Buffer;
-      Length       : Natural;
+      Length : PDU_Data_Length;
       Sub_Function : out Interfaces.Unsigned_16;
       Data         : out Interfaces.Unsigned_16;
       Response     : out Status)
@@ -523,7 +523,7 @@ is
 
    procedure Decode_Report_Server_Id_Response
      (Buffer        : PDU_Buffer;
-      Length        : Natural;
+      Length : PDU_Data_Length;
       Server_Id     : out Byte;
       Run_Indicator : out Boolean;
       Add_Data      : out Byte_Array;
@@ -603,7 +603,7 @@ is
 
    procedure Decode_Mask_Write_Register_Response
      (Buffer   : PDU_Buffer;
-      Length   : Natural;
+      Length : PDU_Data_Length;
       Address  : out Register_Address;
       And_Mask : out Register_Value;
       Or_Mask  : out Register_Value;
@@ -683,7 +683,7 @@ is
 
    procedure Decode_Read_Write_Registers_Response
      (Buffer   : PDU_Buffer;
-      Length   : Natural;
+      Length : PDU_Data_Length;
       Values   : out Register_Array;
       Count    : out Natural;
       Response : out Status)

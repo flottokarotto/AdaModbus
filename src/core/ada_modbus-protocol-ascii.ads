@@ -29,6 +29,9 @@ is
 
    subtype Frame_Buffer is Byte_Array (0 .. Max_Frame_Size - 1);
 
+   --  Frame data length (for parameters, not indices)
+   subtype Frame_Data_Length is Natural range 0 .. Max_Frame_Size;
+
    --  Build ASCII frame from PDU
    --  Converts binary data to hex ASCII and adds framing
    --  Frame size = 1 ':' + 2*(1 addr + PDU_Length) + 2 LRC + 2 CRLF
@@ -37,20 +40,18 @@ is
       Frame_Length : out Natural;
       Slave        : Unit_Id;
       PDU          : PDU_Buffer;
-      PDU_Length   : Natural)
-     with Pre => PDU_Length <= Max_PDU_Size
-                 and then 1 + 2 * (1 + PDU_Length) + 4 <= Max_Frame_Size;
+      PDU_Length   : PDU_Data_Length)
+     with Pre => 1 + 2 * (1 + PDU_Length) + 4 <= Max_Frame_Size;
 
    --  Parse ASCII frame, extract PDU
    --  Verifies LRC and extracts slave address and PDU
    procedure Parse_Frame
      (Frame        : Frame_Buffer;
-      Frame_Length : Natural;
+      Frame_Length : Frame_Data_Length;
       Slave        : out Unit_Id;
       PDU          : out PDU_Buffer;
       PDU_Length   : out Natural;
-      Result       : out Status)
-     with Pre => Frame_Length <= Max_Frame_Size;
+      Result       : out Status);
 
    --  Convert byte to two hex ASCII characters
    procedure Byte_To_Hex (Value : Byte; High, Low : out Byte);

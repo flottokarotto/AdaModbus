@@ -48,7 +48,8 @@ project Adamodbus is
       "Ada_Modbus.Energy.SunSpec.Nameplate",
       "Ada_Modbus.Energy.SunSpec.Settings",
       "Ada_Modbus.Energy.SunSpec.DER",
-      "Ada_Modbus.Energy.SunSpec.Battery");
+      "Ada_Modbus.Energy.SunSpec.Battery",
+      "Ada_Modbus.Energy.Go_E");
 
    type Build_Mode_Type is ("debug", "release");
    Build_Mode : Build_Mode_Type := external ("ADAMODBUS_BUILD_MODE", "debug");

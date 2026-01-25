@@ -32,6 +32,9 @@ is
    subtype ADU_Index is Natural range 0 .. Max_ADU_Size - 1;
    subtype ADU_Buffer is Byte_Array (0 .. Max_ADU_Size - 1);
 
+   --  ADU data length (for parameters, not indices)
+   subtype ADU_Data_Length is Natural range 0 .. Max_ADU_Size;
+
    --  Transaction ID type
    type Transaction_Id is new Interfaces.Unsigned_16;
 
@@ -42,22 +45,20 @@ is
       Transaction   : Transaction_Id;
       Unit          : Unit_Id;
       PDU           : PDU_Buffer;
-      PDU_Length    : Natural)
-     with Pre => PDU_Length <= Max_PDU_Size
-                 and then PDU_Length + MBAP_Header_Size <= Max_ADU_Size,
+      PDU_Length    : PDU_Data_Length)
+     with Pre  => PDU_Length + MBAP_Header_Size <= Max_ADU_Size,
           Post => ADU_Length = PDU_Length + MBAP_Header_Size;
 
    --  Parse TCP frame, extract PDU
    --  Verifies protocol ID and extracts transaction ID, unit ID, and PDU
    procedure Parse_Frame
      (ADU           : ADU_Buffer;
-      ADU_Length    : Natural;
+      ADU_Length    : ADU_Data_Length;
       Transaction   : out Transaction_Id;
       Unit          : out Unit_Id;
       PDU           : out PDU_Buffer;
       PDU_Length    : out Natural;
-      Result        : out Status)
-     with Pre => ADU_Length <= Max_ADU_Size;
+      Result        : out Status);
 
    --  Extract transaction ID from frame (for response matching)
    function Get_Transaction_Id (ADU : ADU_Buffer) return Transaction_Id;

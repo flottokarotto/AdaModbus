@@ -14,7 +14,7 @@ project Examples is
                   "diagnostics_demo.adb", "data_logger.adb",
                   "device_simulator.adb", "kostal_reader.adb",
                   "ksem_reader.adb", "kostal_dashboard.adb",
-                  "ksem_dashboard.adb");
+                  "ksem_dashboard.adb", "go_e_dashboard.adb");
 
    package Compiler is
       --  Inherit common switches from main library, plus debug flags:
@@ -22,10 +22,9 @@ project Examples is
       --    -gnatwa    : Enable all common warnings
       --    -gnatw.X   : Disable warnings for No_Exception_Propagation
       --    -g         : Generate debug information
-      --    -O0        : No optimization (better debugging)
       --    -gnata     : Enable assertions and contracts
       for Default_Switches ("Ada") use
-        ("-gnat2022", "-gnatwa", "-gnatw.X", "-g", "-O0", "-gnata");
+        ("-gnat2022", "-gnatwa", "-gnatw.X", "-g", "-O2", "-gnata");
    end Compiler;
 
 end Examples;

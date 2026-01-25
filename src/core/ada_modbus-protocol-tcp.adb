@@ -19,7 +19,7 @@ is
       Transaction   : Transaction_Id;
       Unit          : Unit_Id;
       PDU           : PDU_Buffer;
-      PDU_Length    : Natural)
+      PDU_Length    : PDU_Data_Length)
    is
       Trans_Bytes  : constant Byte_Array := To_Big_Endian (Register_Value (Transaction));
       Proto_Bytes  : constant Byte_Array := To_Big_Endian (Register_Value (Modbus_Protocol_ID));
@@ -56,7 +56,7 @@ is
 
    procedure Parse_Frame
      (ADU           : ADU_Buffer;
-      ADU_Length    : Natural;
+      ADU_Length    : ADU_Data_Length;
       Transaction   : out Transaction_Id;
       Unit          : out Unit_Id;
       PDU           : out PDU_Buffer;

@@ -70,7 +70,7 @@ is
       Frame_Length : out Natural;
       Slave        : Unit_Id;
       PDU          : PDU_Buffer;
-      PDU_Length   : Natural)
+      PDU_Length   : PDU_Data_Length)
    is
       Idx       : Natural := 0;
       LRC_Data  : Byte_Array (0 .. PDU_Length) := [others => 0];
@@ -132,7 +132,7 @@ is
 
    procedure Parse_Frame
      (Frame        : Frame_Buffer;
-      Frame_Length : Natural;
+      Frame_Length : Frame_Data_Length;
       Slave        : out Unit_Id;
       PDU          : out PDU_Buffer;
       PDU_Length   : out Natural;

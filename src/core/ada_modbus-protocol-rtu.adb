@@ -17,7 +17,7 @@ is
       ADU_Length  : out Natural;
       Slave       : Unit_Id;
       PDU         : PDU_Buffer;
-      PDU_Length  : Natural)
+      PDU_Length  : PDU_Data_Length)
    is
       CRC : CRC16.CRC_Value;
    begin
@@ -46,7 +46,7 @@ is
 
    procedure Parse_Frame
      (ADU        : ADU_Buffer;
-      ADU_Length : Natural;
+      ADU_Length : ADU_Data_Length;
       Slave      : out Unit_Id;
       PDU        : out PDU_Buffer;
       PDU_Length : out Natural;
