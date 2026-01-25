@@ -25,6 +25,9 @@ jobs:
           toolchain: gnat_native^15
           cache: true
 
+      - name: Select toolchain
+        run: alr toolchain --select gnat_native^15 gprbuild
+
       - name: Build library (release)
         run: alr build -- -XADAMODBUS_BUILD_MODE=release
 
