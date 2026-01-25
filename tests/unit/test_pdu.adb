@@ -479,6 +479,270 @@ package body Test_PDU is
       Assert (Result = Frame_Error, "Should fail with too short frame");
    end Test_Mask_Write_Register;
 
+   --  Test: Byte_Count validation in Decode_Read_Registers_Response
+   procedure Test_Decode_Registers_Byte_Count_Overflow (T : in Out Test_Case'Class);
+   procedure Test_Decode_Registers_Byte_Count_Overflow (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Buffer : PDU_Buffer := [others => 0];
+      Values : Register_Array (0 .. 9);
+      Count  : Natural;
+      Result : Status;
+   begin
+      --  Set Byte_Count > Max_PDU_Size - 2 (> 251)
+      --  Max_PDU_Size = 253, so PDU_Data_Length max is 253
+      Buffer (0) := 16#03#;  --  FC
+      Buffer (1) := 252;     --  Byte count = 252 (> 251, should fail)
+
+      Decode_Read_Registers_Response (Buffer, 253, Values, Count, Result);
+
+      Assert (Result = Frame_Error, "Should fail with oversized Byte_Count");
+      Assert (Count = 0, "Count should be 0 on error");
+   end Test_Decode_Registers_Byte_Count_Overflow;
+
+   --  Test: Byte_Count validation in Decode_Read_Bits_Response
+   procedure Test_Decode_Bits_Byte_Count_Overflow (T : in Out Test_Case'Class);
+   procedure Test_Decode_Bits_Byte_Count_Overflow (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Buffer : PDU_Buffer := [others => 0];
+      Values : Coil_Array (0 .. 15);
+      Count  : Natural;
+      Result : Status;
+   begin
+      --  Set Byte_Count > Max_PDU_Size - 2 (> 251)
+      --  Max_PDU_Size = 253, so PDU_Data_Length max is 253
+      Buffer (0) := 16#01#;  --  FC
+      Buffer (1) := 252;     --  Byte count = 252 (> 251, should fail)
+
+      Decode_Read_Bits_Response (Buffer, 253, Values, Count, Result);
+
+      Assert (Result = Frame_Error, "Should fail with oversized Byte_Count");
+      Assert (Count = 0, "Count should be 0 on error");
+   end Test_Decode_Bits_Byte_Count_Overflow;
+
+   --  Test: Exception responses in various decoders
+   procedure Test_Decode_Bits_Exception (T : in Out Test_Case'Class);
+   procedure Test_Decode_Bits_Exception (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Buffer : PDU_Buffer := [others => 0];
+      Values : Coil_Array (0 .. 15);
+      Count  : Natural;
+      Result : Status;
+   begin
+      Buffer (0) := 16#81#;  --  FC 01 + 0x80 = exception
+      Buffer (1) := 16#02#;  --  Illegal Address
+
+      Decode_Read_Bits_Response (Buffer, 2, Values, Count, Result);
+
+      Assert (Result = Exception_Illegal_Address, "Should detect exception");
+      Assert (Count = 0, "Count should be 0 on exception");
+   end Test_Decode_Bits_Exception;
+
+   procedure Test_Decode_Write_Single_Exception (T : in Out Test_Case'Class);
+   procedure Test_Decode_Write_Single_Exception (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Buffer  : PDU_Buffer := [others => 0];
+      Address : Register_Address;
+      Value   : Register_Value;
+      Result  : Status;
+   begin
+      Buffer (0) := 16#86#;  --  FC 06 + 0x80 = exception
+      Buffer (1) := 16#03#;  --  Illegal Value
+
+      Decode_Write_Single_Response (Buffer, 2, Address, Value, Result);
+
+      Assert (Result = Exception_Illegal_Value, "Should detect exception");
+   end Test_Decode_Write_Single_Exception;
+
+   procedure Test_Decode_Write_Multiple_Exception (T : in Out Test_Case'Class);
+   procedure Test_Decode_Write_Multiple_Exception (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Buffer   : PDU_Buffer := [others => 0];
+      Address  : Register_Address;
+      Quantity : Natural;
+      Result   : Status;
+   begin
+      Buffer (0) := 16#90#;  --  FC 10 + 0x80 = exception
+      Buffer (1) := 16#04#;  --  Slave Failure
+
+      Decode_Write_Multiple_Response (Buffer, 2, Address, Quantity, Result);
+
+      Assert (Result = Exception_Slave_Failure, "Should detect exception");
+   end Test_Decode_Write_Multiple_Exception;
+
+   procedure Test_Decode_Diagnostics_Exception (T : in Out Test_Case'Class);
+   procedure Test_Decode_Diagnostics_Exception (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Buffer       : PDU_Buffer := [others => 0];
+      Sub_Function : Interfaces.Unsigned_16;
+      Data_Out     : Interfaces.Unsigned_16;
+      Result       : Status;
+   begin
+      Buffer (0) := 16#88#;  --  FC 08 + 0x80 = exception
+      Buffer (1) := 16#01#;  --  Illegal Function
+
+      Decode_Diagnostics_Response (Buffer, 2, Sub_Function, Data_Out, Result);
+
+      Assert (Result = Exception_Illegal_Function, "Should detect exception");
+   end Test_Decode_Diagnostics_Exception;
+
+   procedure Test_Decode_Mask_Write_Exception (T : in Out Test_Case'Class);
+   procedure Test_Decode_Mask_Write_Exception (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Buffer   : PDU_Buffer := [others => 0];
+      Address  : Register_Address;
+      And_Mask : Register_Value;
+      Or_Mask  : Register_Value;
+      Result   : Status;
+   begin
+      Buffer (0) := 16#96#;  --  FC 16 + 0x80 = exception
+      Buffer (1) := 16#02#;  --  Illegal Address
+
+      Decode_Mask_Write_Register_Response (Buffer, 2, Address, And_Mask, Or_Mask, Result);
+
+      Assert (Result = Exception_Illegal_Address, "Should detect exception");
+   end Test_Decode_Mask_Write_Exception;
+
+   --  Test: Report Server ID with Byte_Count < 2
+   procedure Test_Report_Server_Id_Short_Byte_Count (T : in Out Test_Case'Class);
+   procedure Test_Report_Server_Id_Short_Byte_Count (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Buffer        : PDU_Buffer := [others => 0];
+      Server_Id     : Byte;
+      Run_Indicator : Boolean;
+      Add_Data      : Byte_Array (0 .. 9);
+      Add_Data_Len  : Natural;
+      Result        : Status;
+   begin
+      Buffer (0) := 16#11#;  --  FC
+      Buffer (1) := 1;       --  Byte count = 1 (< 2, should fail)
+      Buffer (2) := 16#01#;  --  Server ID
+      --  No room for run indicator
+
+      Decode_Report_Server_Id_Response
+        (Buffer, 4, Server_Id, Run_Indicator, Add_Data, Add_Data_Len, Result);
+
+      Assert (Result = Frame_Error, "Should fail with Byte_Count < 2");
+   end Test_Report_Server_Id_Short_Byte_Count;
+
+   --  Test: Report Server ID exception response
+   procedure Test_Report_Server_Id_Exception (T : in Out Test_Case'Class);
+   procedure Test_Report_Server_Id_Exception (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Buffer        : PDU_Buffer := [others => 0];
+      Server_Id     : Byte;
+      Run_Indicator : Boolean;
+      Add_Data      : Byte_Array (0 .. 9);
+      Add_Data_Len  : Natural;
+      Result        : Status;
+   begin
+      Buffer (0) := 16#91#;  --  FC 11 + 0x80 = exception
+      Buffer (1) := 16#01#;  --  Illegal Function
+
+      Decode_Report_Server_Id_Response
+        (Buffer, 2, Server_Id, Run_Indicator, Add_Data, Add_Data_Len, Result);
+
+      Assert (Result = Exception_Illegal_Function, "Should detect exception");
+   end Test_Report_Server_Id_Exception;
+
+   --  Test: Read Exception Status exception response
+   procedure Test_Read_Exception_Status_Exception (T : in Out Test_Case'Class);
+   procedure Test_Read_Exception_Status_Exception (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Buffer     : PDU_Buffer := [others => 0];
+      Exc_Status : Byte;
+      Result     : Status;
+   begin
+      Buffer (0) := 16#87#;  --  FC 07 + 0x80 = exception
+      Buffer (1) := 16#01#;  --  Illegal Function
+
+      Decode_Read_Exception_Status_Response (Buffer, 2, Exc_Status, Result);
+
+      Assert (Result = Exception_Illegal_Function, "Should detect exception");
+   end Test_Read_Exception_Status_Exception;
+
+   --  Test: Is_Exception_Response and Get_Exception_Code
+   procedure Test_Exception_Response_Helpers (T : in Out Test_Case'Class);
+   procedure Test_Exception_Response_Helpers (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+   begin
+      --  Is_Exception_Response
+      Assert (Is_Exception_Response (16#80#), "0x80 should be exception");
+      Assert (Is_Exception_Response (16#83#), "0x83 should be exception");
+      Assert (Is_Exception_Response (16#FF#), "0xFF should be exception");
+      Assert (not Is_Exception_Response (16#01#), "0x01 should not be exception");
+      Assert (not Is_Exception_Response (16#7F#), "0x7F should not be exception");
+
+      --  Get_Exception_Code (masks off high bit)
+      Assert (Get_Exception_Code (16#81#) = 16#01#, "0x81 -> 0x01");
+      Assert (Get_Exception_Code (16#83#) = 16#03#, "0x83 -> 0x03");
+      Assert (Get_Exception_Code (16#90#) = 16#10#, "0x90 -> 0x10");
+   end Test_Exception_Response_Helpers;
+
+   --  Test: Additional Frame_Error paths for coverage
+   procedure Test_Frame_Error_Paths (T : in Out Test_Case'Class);
+   procedure Test_Frame_Error_Paths (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Buffer   : PDU_Buffer := [others => 0];
+      Values_R : Register_Array (0 .. 9);
+      Values_C : Coil_Array (0 .. 15);
+      Count    : Natural;
+      Address  : Register_Address;
+      Quantity : Natural;
+      Result   : Status;
+   begin
+      --  Decode_Read_Bits_Response: Length < 2
+      Buffer (0) := 16#01#;
+      Decode_Read_Bits_Response (Buffer, 1, Values_C, Count, Result);
+      Assert (Result = Frame_Error, "Read Bits: Length < 2 should fail");
+
+      --  Decode_Read_Bits_Response: Length < 2 + Byte_Count
+      Buffer (0) := 16#01#;
+      Buffer (1) := 10;  --  Byte_Count = 10
+      Decode_Read_Bits_Response (Buffer, 5, Values_C, Count, Result);  --  Length = 5 < 12
+      Assert (Result = Frame_Error, "Read Bits: Length < 2 + Byte_Count should fail");
+
+      --  Decode_Read_Registers_Response: Length < 2 + Byte_Count
+      Buffer (0) := 16#03#;
+      Buffer (1) := 10;  --  Byte_Count = 10
+      Decode_Read_Registers_Response (Buffer, 5, Values_R, Count, Result);  --  Length = 5 < 12
+      Assert (Result = Frame_Error, "Read Regs: Length < 2 + Byte_Count should fail");
+
+      --  Decode_Write_Multiple_Response: Length < 5
+      Buffer (0) := 16#10#;
+      Decode_Write_Multiple_Response (Buffer, 3, Address, Quantity, Result);
+      Assert (Result = Frame_Error, "Write Multiple: Length < 5 should fail");
+
+      --  Decode_Exception_Response: Length < 2
+      Buffer (0) := 16#83#;
+      Decode_Exception_Response (Buffer, 1, Result);
+      Assert (Result = Frame_Error, "Exception Response: Length < 2 should fail");
+   end Test_Frame_Error_Paths;
+
+   --  Test: Boundary values for register encoding
+   procedure Test_Encode_Boundary_Values (T : in Out Test_Case'Class);
+   procedure Test_Encode_Boundary_Values (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Buffer : PDU_Buffer;
+      Length : Natural;
+   begin
+      --  Max address (65535)
+      Encode_Read_Registers_Request
+        (Buffer, Length, FC_Read_Holding_Registers,
+         Start_Address => 65535, Quantity => 1);
+      Assert (Buffer (1) = 16#FF# and Buffer (2) = 16#FF#, "Max address encoding");
+
+      --  Max quantity (125)
+      Encode_Read_Registers_Request
+        (Buffer, Length, FC_Read_Holding_Registers,
+         Start_Address => 0, Quantity => 125);
+      Assert (Buffer (3) = 16#00# and Buffer (4) = 16#7D#, "Max quantity encoding");
+
+      --  Max register value
+      Encode_Write_Single_Register_Request
+        (Buffer, Length, Address => 0, Value => 65535);
+      Assert (Buffer (3) = 16#FF# and Buffer (4) = 16#FF#, "Max value encoding");
+   end Test_Encode_Boundary_Values;
+
    --  Test: Read/Write Multiple Registers (FC 23) encode/decode
    procedure Test_Read_Write_Registers (T : in Out Test_Case'Class);
    procedure Test_Read_Write_Registers (T : in Out Test_Case'Class) is
@@ -554,6 +818,20 @@ package body Test_PDU is
       Registration.Register_Routine (T, Test_Report_Server_Id'Access, "Report Server ID (FC 17)");
       Registration.Register_Routine (T, Test_Mask_Write_Register'Access, "Mask Write Register (FC 22)");
       Registration.Register_Routine (T, Test_Read_Write_Registers'Access, "Read/Write Registers (FC 23)");
+      --  Coverage tests for error paths
+      Registration.Register_Routine (T, Test_Decode_Registers_Byte_Count_Overflow'Access, "Byte_Count overflow (registers)");
+      Registration.Register_Routine (T, Test_Decode_Bits_Byte_Count_Overflow'Access, "Byte_Count overflow (bits)");
+      Registration.Register_Routine (T, Test_Decode_Bits_Exception'Access, "Exception in Read Bits");
+      Registration.Register_Routine (T, Test_Decode_Write_Single_Exception'Access, "Exception in Write Single");
+      Registration.Register_Routine (T, Test_Decode_Write_Multiple_Exception'Access, "Exception in Write Multiple");
+      Registration.Register_Routine (T, Test_Decode_Diagnostics_Exception'Access, "Exception in Diagnostics");
+      Registration.Register_Routine (T, Test_Decode_Mask_Write_Exception'Access, "Exception in Mask Write");
+      Registration.Register_Routine (T, Test_Report_Server_Id_Short_Byte_Count'Access, "Report Server ID short Byte_Count");
+      Registration.Register_Routine (T, Test_Report_Server_Id_Exception'Access, "Exception in Report Server ID");
+      Registration.Register_Routine (T, Test_Read_Exception_Status_Exception'Access, "Exception in Read Exception Status");
+      Registration.Register_Routine (T, Test_Exception_Response_Helpers'Access, "Is_Exception_Response/Get_Exception_Code");
+      Registration.Register_Routine (T, Test_Frame_Error_Paths'Access, "Frame_Error edge cases");
+      Registration.Register_Routine (T, Test_Encode_Boundary_Values'Access, "Encode boundary values");
    end Register_Tests;
 
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
