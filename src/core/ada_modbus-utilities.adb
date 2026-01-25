@@ -114,17 +114,17 @@ is
             Low_Word  := Register_Value (C) * 256 + Register_Value (D);
 
          when Little_Endian =>
-            --  DCBA
-            High_Word := Register_Value (C) * 256 + Register_Value (D);
-            Low_Word  := Register_Value (A) * 256 + Register_Value (B);
+            --  DCBA: bytes fully reversed
+            High_Word := Register_Value (D) * 256 + Register_Value (C);
+            Low_Word  := Register_Value (B) * 256 + Register_Value (A);
 
          when Mid_Big_Endian =>
-            --  BADC
+            --  BADC: bytes swapped within each word
             High_Word := Register_Value (B) * 256 + Register_Value (A);
             Low_Word  := Register_Value (D) * 256 + Register_Value (C);
 
          when Mid_Little_Endian =>
-            --  CDAB
+            --  CDAB: words swapped (low word first)
             High_Word := Register_Value (C) * 256 + Register_Value (D);
             Low_Word  := Register_Value (A) * 256 + Register_Value (B);
       end case;
