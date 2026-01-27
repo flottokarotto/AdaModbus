@@ -173,6 +173,9 @@ jobs:
       - name: Sync dependencies
         run: alr update
 
+      - name: Add gnatprove for SPARK verification
+        run: alr --force with gnatprove
+
       - name: Cache SPARK results
         uses: actions/cache@v4
         with:

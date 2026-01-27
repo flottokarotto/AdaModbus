@@ -1,27 +1,22 @@
 name = "adamodbus"
 description = "SPARK-verified Ada 2022 Modbus library with SunSpec support and C API"
-version = "1.0.0"
+version = "1.0.1"
 licenses = "MIT"
 authors = ["Florian Fischer <florian.j.a.fischer@icloud.com>"]
 maintainers = ["Florian Fischer <florian.j.a.fischer@icloud.com>"]
-maintainers-logins = ["flottflo"]
+maintainers-logins = ["flottokarotto"]
 website = "https://github.com/flottokarotto/AdaModbus"
 
 tags = ["modbus", "embedded", "protocol", "serial", "tcp", "spark", "industrial", "sunspec", "energy", "solar"]
 
 # For TLS support, use the separate adamodbus_tls crate
+# For development: alr with gnatprove
 
 [gpr-externals]
 ADAMODBUS_BUILD_MODE = ["debug", "release"]
-
-[gpr-set-externals]
-ADAMODBUS_BUILD_MODE = "debug"
 
 [[depends-on]]
 gnat = ">=12"
 
 [[depends-on]]
 aunit = "^26.0.0"
-
-[[depends-on]]
-gnatprove = "^15.1.0"
