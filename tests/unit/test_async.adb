@@ -450,6 +450,134 @@ package body Test_Async is
       Assert (not Success_Flag, "5th request should fail - queue full");
    end Test_Queue_Full;
 
+   --  Test: Read Input Registers Async (FC04)
+   procedure Test_Read_Input_Registers_Async (T : in Out Test_Case'Class);
+   procedure Test_Read_Input_Registers_Async (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Master_Ctx : Mock_Async_Master.Master_Context;
+      Config     : Mock_Async_Master.Master_Config;
+      Async_Ctx  : Mock_Async.Async_Context;
+      Handle     : Mock_Async.Request_Handle;
+      Success    : Boolean;
+   begin
+      Reset_Async_Mocks;
+
+      Config.Mode := Mock_Async_Master.RTU;
+      Config.Default_Timeout := 1000;
+      Mock_Async_Master.Initialize (Master_Ctx, Config, Test_Async_Transport);
+      Mock_Async.Initialize (Async_Ctx, Master_Ctx);
+
+      Success := Mock_Async.Read_Input_Registers_Async
+        (Async_Ctx, Slave => 1, Start_Address => 0, Quantity => 2,
+         On_Response => Test_Read_Callback'Access, Handle => Handle);
+
+      Assert (Success, "Read input registers async should succeed");
+      Assert (Mock_Async.Pending_Count (Async_Ctx) = 1, "Should have 1 pending request");
+   end Test_Read_Input_Registers_Async;
+
+   --  Callback tracking for coils
+   Coils_Callback_Called : Boolean := False;
+
+   procedure Test_Coils_Callback
+     (Handle         : Mock_Async.Request_Handle;
+      Resp_Status    : Mock_Async.Response_Status;
+      Slave          : Unit_Id;
+      Values         : Coil_Array;
+      Exception_Code : Byte)
+   is
+      pragma Unreferenced (Handle, Resp_Status, Slave, Values, Exception_Code);
+   begin
+      Coils_Callback_Called := True;
+   end Test_Coils_Callback;
+
+   --  Test: Read Coils Async (FC01)
+   procedure Test_Read_Coils_Async (T : in Out Test_Case'Class);
+   procedure Test_Read_Coils_Async (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Master_Ctx : Mock_Async_Master.Master_Context;
+      Config     : Mock_Async_Master.Master_Config;
+      Async_Ctx  : Mock_Async.Async_Context;
+      Handle     : Mock_Async.Request_Handle;
+      Success    : Boolean;
+   begin
+      Reset_Async_Mocks;
+      Coils_Callback_Called := False;
+
+      Config.Mode := Mock_Async_Master.RTU;
+      Config.Default_Timeout := 1000;
+      Mock_Async_Master.Initialize (Master_Ctx, Config, Test_Async_Transport);
+      Mock_Async.Initialize (Async_Ctx, Master_Ctx);
+
+      Success := Mock_Async.Read_Coils_Async
+        (Async_Ctx, Slave => 1, Start_Address => 0, Quantity => 8,
+         On_Response => Test_Coils_Callback'Access, Handle => Handle);
+
+      Assert (Success, "Read coils async should succeed");
+      Assert (Mock_Async.Pending_Count (Async_Ctx) = 1, "Should have 1 pending request");
+   end Test_Read_Coils_Async;
+
+   --  Callback tracking for exception test
+   Exception_Callback_Called : Boolean := False;
+   Exception_Callback_Status : Mock_Async.Response_Status := Mock_Async.Response_Success;
+
+   procedure Exception_Test_Callback
+     (Handle         : Mock_Async.Request_Handle;
+      Resp_Status    : Mock_Async.Response_Status;
+      Slave          : Unit_Id;
+      Values         : Register_Array;
+      Exception_Code : Byte)
+   is
+      pragma Unreferenced (Handle, Slave, Values, Exception_Code);
+   begin
+      Exception_Callback_Called := True;
+      Exception_Callback_Status := Resp_Status;
+   end Exception_Test_Callback;
+
+   --  Test: Exception Response Handling
+   procedure Test_Exception_Response (T : in Out Test_Case'Class);
+   procedure Test_Exception_Response (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Master_Ctx : Mock_Async_Master.Master_Context;
+      Config     : Mock_Async_Master.Master_Config;
+      Async_Ctx  : Mock_Async.Async_Context;
+      Handle     : Mock_Async.Request_Handle;
+      Resp_PDU   : Protocol.PDU_Buffer := [others => 0];
+      Resp_ADU   : Protocol.RTU.ADU_Buffer;
+      Resp_Len   : Natural;
+      Success    : Boolean;
+   begin
+      Reset_Async_Mocks;
+      Exception_Callback_Called := False;
+      Exception_Callback_Status := Mock_Async.Response_Success;
+
+      Config.Mode := Mock_Async_Master.RTU;
+      Config.Default_Timeout := 1000;
+      Mock_Async_Master.Initialize (Master_Ctx, Config, Test_Async_Transport);
+      Mock_Async.Initialize (Async_Ctx, Master_Ctx);
+
+      Success := Mock_Async.Read_Holding_Registers_Async
+        (Async_Ctx, Slave => 1, Start_Address => 0, Quantity => 1,
+         On_Response => Exception_Test_Callback'Access, Handle => Handle);
+      Assert (Success, "Should start async read");
+
+      --  Simulate exception response (FC + 0x80)
+      Resp_PDU (0) := 16#83#;  --  FC03 + 0x80
+      Resp_PDU (1) := 16#02#;  --  Illegal Address
+
+      Protocol.RTU.Build_Frame (Resp_ADU, Resp_Len, Slave => 1, PDU => Resp_PDU, PDU_Length => 2);
+
+      for I in 0 .. Resp_Len - 1 loop
+         Async_Recv_Buffer (I) := Resp_ADU (I);
+      end loop;
+      Async_Recv_Length := Resp_Len;
+      Async_Recv_Available := True;
+
+      Mock_Async.Process_Pending (Async_Ctx);
+
+      Assert (Exception_Callback_Called, "Callback should be invoked");
+      Assert (Exception_Callback_Status = Mock_Async.Response_Exception, "Status should be Exception");
+   end Test_Exception_Response;
+
    overriding procedure Register_Tests (T : in Out Async_Test_Case) is
    begin
       Registration.Register_Routine (T, Test_Initialize'Access, "Initialize Async Context");
@@ -460,6 +588,9 @@ package body Test_Async is
       Registration.Register_Routine (T, Test_Write_Async'Access, "Write Async");
       Registration.Register_Routine (T, Test_Multiple_Pending'Access, "Multiple Pending");
       Registration.Register_Routine (T, Test_Queue_Full'Access, "Queue Full");
+      Registration.Register_Routine (T, Test_Read_Input_Registers_Async'Access, "Read Input Registers Async");
+      Registration.Register_Routine (T, Test_Read_Coils_Async'Access, "Read Coils Async");
+      Registration.Register_Routine (T, Test_Exception_Response'Access, "Exception Response");
    end Register_Tests;
 
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
