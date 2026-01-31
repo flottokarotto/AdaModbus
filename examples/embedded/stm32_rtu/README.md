@@ -1,8 +1,8 @@
-# STM32 Modbus RTU Example
+# STM32 Modbus RTU
 
-RTU Master and Slave for STM32, testable with QEMU.
+Modbus RTU master and slave examples, testable with QEMU.
 
-## Build
+## Building
 
 ```bash
 cd examples/embedded/stm32_rtu
@@ -10,35 +10,29 @@ alr exec -- gprbuild -P stm32_rtu.gpr -XMAIN=slave
 alr exec -- gprbuild -P stm32_rtu.gpr -XMAIN=master
 ```
 
-## Run with QEMU
+## Running with QEMU
 
+Single instance:
 ```bash
-# Single instance
 ./run_qemu.sh slave
 ./run_qemu.sh master
-
-# Master-Slave via socket
-./run_qemu.sh slave-server  # Terminal 1
-./run_qemu.sh master-client # Terminal 2
-
-# CI test
-./run_ci_test.sh
 ```
 
-Exit QEMU: `Ctrl+A`, then `X`
+Master-slave communication via socket:
+```bash
+# Terminal 1
+./run_qemu.sh slave-server
 
-## Architecture
+# Terminal 2
+./run_qemu.sh master-client
+```
 
-```
-QEMU (Slave)  <-- Socket:5555 -->  QEMU (Master)
-   UART0                              UART0
-```
+Exit QEMU with `Ctrl+A`, then `X`.
 
 ## Slave Register Map
 
 | Address | Type | Description |
 |---------|------|-------------|
-| 0-31 | Holding | R/W registers |
-| 0 | Input | Request count |
-| 1 | Input | Uptime (seconds) |
-| 0-63 | Coils | R/W bits |
+| 0-31 | Holding Registers | Read/write |
+| 0-31 | Input Registers | Read-only (0=request count, 1=uptime) |
+| 0-63 | Coils | Read/write bits |

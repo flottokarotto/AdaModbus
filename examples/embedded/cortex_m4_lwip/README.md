@@ -1,44 +1,41 @@
-# Cortex-M4 LwIP Example
+# Cortex-M4 with LwIP
 
-Modbus TCP for ARM Cortex-M with LwIP.
+Modbus TCP example for ARM Cortex-M microcontrollers using the LwIP TCP/IP stack.
 
-## Quick Start (QEMU)
+## Quick Start (QEMU, no network)
 
 ```bash
 alr toolchain --select gnat_arm_elf
 cd examples/embedded/cortex_m4_lwip
 alr build
-qemu-system-arm -M lm3s6965evb -nographic -semihosting \
-  -kernel bin/main_loopback.elf
+qemu-system-arm -M lm3s6965evb -nographic -semihosting -kernel bin/main_loopback.elf
 ```
 
-Exit QEMU: `Ctrl+A`, then `X`
+Exit QEMU with `Ctrl+A`, then `X`.
 
 ## Programs
 
-| Program | Network | Description |
-|---------|---------|-------------|
-| `main_loopback` | No | Self-test (QEMU) |
-| `main_slave` | Yes | TCP server |
-| `main_master` | Yes | TCP client |
+| Program | Description |
+|---------|-------------|
+| `main_loopback` | Loopback self-test, runs without network |
+| `main_slave` | Modbus TCP server using LwIP |
+| `main_master` | Modbus TCP client using LwIP |
 
-## Build with LwIP
+## Building with LwIP
 
 ```bash
 git submodule update --init
 alr exec -- gprbuild -P cortex_m4_lwip.gpr -XLWIP=enabled
 ```
 
-## Memory
+## Memory Usage
 
-| Config | Flash | RAM |
-|--------|-------|-----|
-| Loopback | ~11 KB | ~9 KB |
-| With LwIP | ~45 KB | ~20 KB |
+- Loopback test: ~11 KB Flash, ~9 KB RAM
+- With LwIP: ~45 KB Flash, ~20 KB RAM
 
 ## Stack Size
 
-Default 2 KB is too small. Project uses 8 KB:
+The default 2 KB stack is too small for Modbus. This project uses 8 KB:
 
 ```gpr
 for Default_Switches ("Ada") use ("-Wl,--defsym=__stack_size=8192");
