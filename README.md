@@ -18,6 +18,20 @@ Ada 2022 Modbus library for embedded and desktop systems.
 - **ZFP-compatible**: No tasking, exceptions, or dynamic allocation
 - **Energy**: SunSpec, SG-Ready, §14a grid control
 
+## Status
+
+| Component | Maturity |
+|-----------|----------|
+| Modbus TCP | Tested (Kostal WR, KSEM, go-e) |
+| Protocol Core | Tested (114 unit tests, SPARK proven) |
+| SunSpec | Tested (Kostal devices) |
+| Modbus RTU | Unit tests only |
+| Modbus ASCII | Unit tests only |
+| Serial Transport | Basic (Windows) |
+| TLS (Desktop) | Experimental |
+| TLS (Embedded) | Experimental |
+| Embedded (ARM) | QEMU only, needs hardware testing |
+
 ## Quick Start
 
 ```bash
