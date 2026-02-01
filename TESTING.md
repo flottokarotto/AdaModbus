@@ -14,7 +14,7 @@ alr exec -- gprbuild -P tests/aunit_tests.gpr
 
 ## Unit Test Coverage
 
-83 unit tests covering:
+214 unit tests covering:
 
 - **Checksums**: CRC-16 calculation and verification (RTU), LRC calculation (ASCII)
 - **PDU encoding/decoding**: All function codes, exception responses, edge cases
@@ -59,4 +59,4 @@ alr with gnatprove
 alr exec -- gnatprove -P adamodbus.gpr --mode=prove --level=1
 ```
 
-All 1000+ verification conditions are proven, guaranteeing no buffer overflows, integer overflows, or uninitialized reads in the protocol core.
+All 628 verification conditions are proven (189 flow analysis, 438 provers), guaranteeing no buffer overflows, integer overflows, or uninitialized reads in the protocol core.

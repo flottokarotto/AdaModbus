@@ -26,13 +26,16 @@ Ada 2022 Modbus library for embedded and desktop systems.
 - Modbus TCP communication with Kostal Smart Energy Meter (KSEM)
 - SunSpec model discovery and register reading on these devices
 
+**Tested in QEMU simulation:**
+- Modbus RTU master-slave communication over virtual UART
+- Embedded ARM builds (Cortex-M4)
+
 **Unit tests only (no real hardware testing yet):**
-- Modbus RTU and ASCII framing
+- Modbus ASCII framing
 - Serial port transport on Windows
 
-**Experimental (compiles and runs in simulation):**
+**Experimental:**
 - TLS transport - not tested with actual Modbus/TCP Security devices
-- Embedded ARM builds - runs in QEMU, but not deployed on real hardware yet
 
 Contributions and hardware testing feedback are welcome!
 
@@ -91,8 +94,11 @@ end Example;
 | 04 | Read Input Registers | Yes | Yes |
 | 05 | Write Single Coil | Yes | Yes |
 | 06 | Write Single Register | Yes | Yes |
+| 07 | Read Exception Status | Yes | Yes |
+| 08 | Diagnostics | Yes | Yes |
 | 15 | Write Multiple Coils | Yes | Yes |
 | 16 | Write Multiple Registers | Yes | Yes |
+| 17 | Report Server ID | Yes | Yes |
 | 22 | Mask Write Register | Yes | Yes |
 | 23 | Read/Write Multiple Registers | Yes | Yes |
 
@@ -109,6 +115,7 @@ end Example;
 | `Ada_Modbus.Energy.SunSpec` | SunSpec profiles for inverters, meters, batteries |
 | `Ada_Modbus.Energy.SG_Ready` | Heat pump control via SG-Ready protocol |
 | `Ada_Modbus.Energy.Grid_Control` | §14a EnWG grid power limitation |
+| `Ada_Modbus.Energy.Go_E` | go-e charger (wallbox) control |
 | `Ada_Modbus.C_API` | C bindings for use without Ada |
 
 ## TLS Support
