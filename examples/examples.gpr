@@ -28,4 +28,8 @@ project Examples is
         ("-gnat2022", "-gnatwa", "-gnatw.X", "-g", "-O2", "-gnata");
    end Compiler;
 
+   package Builder is
+      for Switches ("Ada") use ("-j0");  --  Use all available CPU cores
+   end Builder;
+
 end Examples;

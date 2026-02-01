@@ -27,10 +27,14 @@ project Adamodbus_Embedded is
 
       case Build_Mode is
          when "debug" =>
-            for Default_Switches ("Ada") use Common_Switches & ("-g", "-O0");
+            for Default_Switches ("Ada") use Common_Switches & ("-g", "-Og");
          when "release" =>
             for Default_Switches ("Ada") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
       end case;
    end Compiler;
+
+   package Builder is
+      for Switches ("Ada") use ("-j0");  --  Use all available CPU cores
+   end Builder;
 
 end Adamodbus_Embedded;

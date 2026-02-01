@@ -59,7 +59,7 @@ project Adamodbus is
 
       case Build_Mode is
          when "debug" =>
-            for Default_Switches ("Ada") use Common_Switches & ("-g", "-O0");
+            for Default_Switches ("Ada") use Common_Switches & ("-g", "-Og");
          when "release" =>
             --  Default: Runtime-Checks bleiben aktiv für Non-SPARK Code
             for Default_Switches ("Ada") use Common_Switches & ("-O2", "-gnatn");
@@ -110,5 +110,9 @@ project Adamodbus is
             for Switches ("ada_modbus-energy-grid_control.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
       end case;
    end Compiler;
+
+   package Builder is
+      for Switches ("Ada") use ("-j0");  --  Use all available CPU cores
+   end Builder;
 
 end Adamodbus;

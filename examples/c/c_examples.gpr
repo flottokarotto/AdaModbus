@@ -15,7 +15,7 @@ project C_Examples is
    package Compiler is
       for Default_Switches ("C") use
         ("-Wall", "-Wextra", "-Wpedantic",
-         "-g", "-O0",
+         "-g", "-Og",
          "-std=c11");
    end Compiler;
 
@@ -23,5 +23,9 @@ project C_Examples is
       --  Link against Windows sockets library
       for Default_Switches ("C") use ("-lws2_32");
    end Linker;
+
+   package Builder is
+      for Switches ("Ada") use ("-j0");  --  Use all available CPU cores
+   end Builder;
 
 end C_Examples;

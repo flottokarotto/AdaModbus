@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-01-27
+
+### Fixed
+- Security issues identified in code review
+- Alire index review feedback
+
+### Changed
+- Improved test coverage for protocol framing to 100%
+- Improved test coverage for ada_modbus-protocol.adb to 99%
+- sunspec_codegen: Use specific exception types instead of generic catch-all
+
+### Added
+- Unit tests for all word order conversions (ABCD, CDAB, BADC, DCBA)
+
 ## [1.0.0] - 2026-01-25
 
 ### Added
@@ -27,10 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Models 101-103: Inverters (single/split/three-phase)
   - Model 120: Nameplate ratings
   - Model 121: Basic settings
+  - Model 122: Measurements
+  - Model 123: Immediate controls
   - Model 124: Basic storage
   - Model 160: Multiple MPPT
   - Models 201-204: Meters (1P/SP/3P Wye/Delta)
-  - Models 701/704: DER AC/Control
+  - Models 701/704: DER AC measurements and controls
   - Model 802: Battery (extended)
 - **go-e Charger**: `Ada_Modbus.Energy.Go_E` package for go-e wallbox
 - SG-Ready heat pump control
@@ -56,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Alire package manager support
 - GitHub Actions CI (build, test, SPARK, embedded)
 - Automated release workflow with binary artifacts
-- 114 unit tests with AUnit
+- 214 unit tests with AUnit
 - Integration tests with Python Modbus simulator
 - Code coverage with Codecov
 
@@ -68,4 +84,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 32-bit word order support (ABCD, CDAB, BADC, DCBA)
 - Signed scale factor support for SunSpec
 
+[1.0.1]: https://github.com/flottokarotto/AdaModbus/releases/tag/v1.0.1
 [1.0.0]: https://github.com/flottokarotto/AdaModbus/releases/tag/v1.0.0

@@ -35,13 +35,13 @@ INCLUDES="-I$SCRIPT_DIR/../c_api"
 
 # Compile c_tcp_master.c
 echo "  Building c_tcp_master..."
-gcc -Wall -Wextra -g -O0 $INCLUDES \
+gcc -Wall -Wextra -g -Og $INCLUDES \
     -c "$SCRIPT_DIR/c_tcp_master.c" \
     -o "$PROJECT_ROOT/obj/c_examples/c_tcp_master.o"
 
 # Compile c_tcp_slave.c
 echo "  Building c_tcp_slave..."
-gcc -Wall -Wextra -g -O0 $INCLUDES \
+gcc -Wall -Wextra -g -Og $INCLUDES \
     -c "$SCRIPT_DIR/c_tcp_slave.c" \
     -o "$PROJECT_ROOT/obj/c_examples/c_tcp_slave.o"
 

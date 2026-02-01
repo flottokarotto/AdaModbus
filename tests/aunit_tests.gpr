@@ -18,10 +18,10 @@ project Aunit_Tests is
       --    -gnatwa    : Enable all common warnings
       --    -gnatw.X   : Disable warnings for No_Exception_Propagation
       --    -g         : Generate debug information
-      --    -O0        : No optimization (better debugging)
+      --    -Og        : Optimize for debugging
       --    -gnatw_A   : Disable anonymous access type allocator warnings (AUnit pattern)
       --  Note: -gnata omitted - SPARK proves contracts, tests should match runtime behavior
-      Common_Switches := ("-gnat2022", "-gnatwa", "-gnatw.X", "-gnatw_A", "-g", "-O0");
+      Common_Switches := ("-gnat2022", "-gnatwa", "-gnatw.X", "-gnatw_A", "-g", "-Og");
 
       case Coverage is
          when "disabled" =>
@@ -45,5 +45,9 @@ project Aunit_Tests is
             for Default_Switches ("Ada") use ("-fprofile-arcs");
       end case;
    end Linker;
+
+   package Builder is
+      for Switches ("Ada") use ("-j0");  --  Use all available CPU cores
+   end Builder;
 
 end Aunit_Tests;
