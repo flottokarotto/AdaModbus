@@ -24,7 +24,7 @@ C_API_DIR := $(PROJECT_ROOT)/src/c_api
 
 # Compiler settings
 CC := gcc
-CFLAGS := -Wall -Wextra -std=c11 -g -O0
+CFLAGS := -Wall -Wextra -std=c11 -g -Og
 CPPFLAGS := -I$(C_API_DIR)
 
 # Find GNAT adalib directory (contains libgnat.a)

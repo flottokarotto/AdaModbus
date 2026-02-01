@@ -15,7 +15,7 @@ project C_Examples is
    package Compiler is
       for Default_Switches ("C") use
         ("-Wall", "-Wextra", "-Wpedantic",
-         "-g", "-O0",
+         "-g", "-Og",
          "-std=c11");
    end Compiler;
 

@@ -34,7 +34,7 @@ project Integration_Tests is
          "-gnatw.X",       --  Disable warnings for No_Exception_Propagation
          "-gnatw_A",       --  Disable anonymous access type allocator warnings
          "-g",             --  Generate debug information
-         "-O0");           --  No optimization for debugging
+         "-Og");           --  Optimize for debugging
    end Compiler;
 
    package Binder is

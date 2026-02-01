@@ -34,7 +34,7 @@ echo Compiling C examples...
 
 REM Compile c_tcp_master.c
 echo   Building c_tcp_master...
-gcc -Wall -Wextra -g -O0 -I"%SCRIPT_DIR%../c_api" ^
+gcc -Wall -Wextra -g -Og -I"%SCRIPT_DIR%../c_api" ^
     -c "%SCRIPT_DIR%c_tcp_master.c" ^
     -o "%OBJ_DIR%\c_examples\c_tcp_master.o"
 if errorlevel 1 (
@@ -44,7 +44,7 @@ if errorlevel 1 (
 
 REM Compile c_tcp_slave.c
 echo   Building c_tcp_slave...
-gcc -Wall -Wextra -g -O0 -I"%SCRIPT_DIR%../c_api" ^
+gcc -Wall -Wextra -g -Og -I"%SCRIPT_DIR%../c_api" ^
     -c "%SCRIPT_DIR%c_tcp_slave.c" ^
     -o "%OBJ_DIR%\c_examples\c_tcp_slave.o"
 if errorlevel 1 (
