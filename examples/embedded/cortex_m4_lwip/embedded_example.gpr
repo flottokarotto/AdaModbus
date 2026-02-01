@@ -105,6 +105,7 @@ project Embedded_Example is
    end Linker;
 
    package Builder is
+      for Switches ("Ada") use ("-j0");  --  Use all available CPU cores
       for Executable_Suffix use ".elf";
    end Builder;
 

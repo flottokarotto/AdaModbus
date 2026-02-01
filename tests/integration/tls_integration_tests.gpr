@@ -39,4 +39,8 @@ project TLS_Integration_Tests is
       for Default_Switches ("Ada") use ("-E");  --  Store traceback in exceptions
    end Binder;
 
+   package Builder is
+      for Switches ("Ada") use ("-j0");  --  Use all available CPU cores
+   end Builder;
+
 end TLS_Integration_Tests;

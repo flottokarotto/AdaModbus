@@ -33,4 +33,8 @@ project Adamodbus_Embedded is
       end case;
    end Compiler;
 
+   package Builder is
+      for Switches ("Ada") use ("-j0");  --  Use all available CPU cores
+   end Builder;
+
 end Adamodbus_Embedded;

@@ -22,6 +22,7 @@ project TLS_Mbed_Tests is
    end Linker;
 
    package Builder is
+      for Switches ("Ada") use ("-j0");  --  Use all available CPU cores
       for Executable ("test_bindings.adb") use "test_mbed_bindings";
    end Builder;
 

@@ -46,4 +46,8 @@ project Aunit_Tests is
       end case;
    end Linker;
 
+   package Builder is
+      for Switches ("Ada") use ("-j0");  --  Use all available CPU cores
+   end Builder;
+
 end Aunit_Tests;

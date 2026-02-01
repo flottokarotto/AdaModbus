@@ -24,4 +24,8 @@ project C_Examples is
       for Default_Switches ("C") use ("-lws2_32");
    end Linker;
 
+   package Builder is
+      for Switches ("Ada") use ("-j0");  --  Use all available CPU cores
+   end Builder;
+
 end C_Examples;

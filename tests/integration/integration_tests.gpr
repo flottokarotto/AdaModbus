@@ -51,4 +51,8 @@ project Integration_Tests is
       end case;
    end Linker;
 
+   package Builder is
+      for Switches ("Ada") use ("-j0");  --  Use all available CPU cores
+   end Builder;
+
 end Integration_Tests;

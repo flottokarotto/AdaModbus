@@ -32,6 +32,10 @@ project Adamodbus_TLS_Mbed is
       end case;
    end Compiler;
 
+   package Builder is
+      for Switches ("Ada") use ("-j0");  --  Use all available CPU cores
+   end Builder;
+
    --  Note: When linking against this library, add the following to your project:
    --    package Linker is
    --       for Default_Switches ("Ada") use ("-lmbedtls", "-lmbedx509", "-lmbedcrypto");
