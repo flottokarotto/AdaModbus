@@ -20,3 +20,5 @@ gnat = ">=12"
 
 [[depends-on]]
 aunit = "^26.0.0"
+
+# For SPARK verification: alr with gnatprove

@@ -1,0 +1,11 @@
+--  Test_Delta_Charger - Delta AC Max Basic EV-Charger tests
+--  Copyright (c) 2026 Florian Fischer
+--  SPDX-License-Identifier: MIT
+
+with AUnit.Test_Suites;
+
+package Test_Delta_Charger is
+
+   function Suite return AUnit.Test_Suites.Access_Test_Suite;
+
+end Test_Delta_Charger;
