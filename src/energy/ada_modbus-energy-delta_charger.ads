@@ -186,7 +186,7 @@ is
      (Power_W : Interfaces.Unsigned_32;
       Buffer  : out Protocol.PDU_Buffer;
       Length  : out Natural)
-     with Post => Length <= Protocol.Max_PDU_Size;
+     with Post => Length = 10;
 
    --  Suspend/Resume Charging (FC 06, register 1602)
    --  0 = active (charging), 1 = suspended (paused)
@@ -218,7 +218,7 @@ is
      (Power_W : Interfaces.Unsigned_32;
       Buffer  : out Protocol.PDU_Buffer;
       Length  : out Natural)
-     with Post => Length <= Protocol.Max_PDU_Size;
+     with Post => Length = 10;
 
    ---------------------------
    --  Response Decoding    --

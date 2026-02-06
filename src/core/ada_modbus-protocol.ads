@@ -101,8 +101,9 @@ is
       Length        : out Natural;
       Start_Address : Register_Address;
       Values        : Register_Array)
-     with Pre => Values'Length >= 1
-                 and then Values'Length <= 123;
+     with Pre  => Values'Length >= 1
+                  and then Values'Length <= 123,
+          Post => Length = 6 + 2 * Values'Length;
 
    --------------------
    --  Response PDUs --

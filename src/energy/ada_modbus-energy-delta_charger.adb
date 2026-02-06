@@ -72,18 +72,15 @@ is
       Length  : out Natural)
    is
       High_Word, Low_Word : Register_Value;
-      Values : Register_Array (0 .. 1);
    begin
       Encode_Uint32 (Power_W, High_Word, Low_Word);
-      Values (0) := High_Word;
-      Values (1) := Low_Word;
 
       --  Write Multiple Registers (FC 16): 1600-1601
       Protocol.Encode_Write_Multiple_Registers_Request
         (Buffer        => Buffer,
          Length        => Length,
          Start_Address => EVSE_Base + Register_Address (Power_Limit_Offset),
-         Values        => Values);
+         Values        => [High_Word, Low_Word]);
    end Encode_Set_Power_Limit_Request;
 
    ---------------------------------
@@ -149,17 +146,14 @@ is
       Length  : out Natural)
    is
       High_Word, Low_Word : Register_Value;
-      Values : Register_Array (0 .. 1);
    begin
       Encode_Uint32 (Power_W, High_Word, Low_Word);
-      Values (0) := High_Word;
-      Values (1) := Low_Word;
 
       Protocol.Encode_Write_Multiple_Registers_Request
         (Buffer        => Buffer,
          Length        => Length,
          Start_Address => Reg_Fallback_Power,
-         Values        => Values);
+         Values        => [High_Word, Low_Word]);
    end Encode_Set_Fallback_Power_Request;
 
    ----------------------------------
