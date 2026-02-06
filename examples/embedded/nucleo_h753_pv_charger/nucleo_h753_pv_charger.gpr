@@ -1,0 +1,96 @@
+--  NUCLEO-H753ZI PV Surplus Charger - GPR Project
+--
+--  Hardware:
+--    - NUCLEO-H753ZI (STM32H753ZI, Cortex-M7, 480 MHz)
+--    - Waveshare RS485 CAN Shield (SP3485)
+--    - SSD1306 OLED 0.96" (I2C)
+--    - LAN8742A Ethernet PHY (onboard)
+--
+--  Setup:
+--    ./setup_lwip.sh   (or setup_lwip.bat on Windows)
+--
+--  Build:
+--    gprbuild -P nucleo_h753_pv_charger.gpr
+--
+--  Flash:
+--    st-flash write bin/nucleo_h753_pv_charger.bin 0x08000000
+--    OR: Drag & drop BIN file to NUCLEO drive
+
+project Nucleo_H753_PV_Charger is
+
+   type Runtime_Type is ("light-cortex-m7f", "zfp-cortex-m7f");
+   Runtime : Runtime_Type := external ("RUNTIME", "light-cortex-m7f");
+
+   for Source_Dirs use
+     ("src",
+      "src/svd",
+      "../../../src/core",
+      "../../../src/energy",
+      "lwip_port",
+      "lwip/src/core",
+      "lwip/src/core/ipv4",
+      "lwip/src/api",
+      "lwip/src/netif",
+      "lwip/src/include",
+      "lwip/src/include/lwip",
+      "lwip/src/include/netif",
+      "lwip/src/include/lwip/priv",
+      "lwip_port/arch");
+
+   for Object_Dir use "obj";
+   for Exec_Dir use "bin";
+   for Main use ("main.adb");
+   for Target use "arm-eabi";
+   for Runtime ("Ada") use Runtime;
+   for Languages use ("Ada", "Asm_Cpp", "C");
+
+   package Naming is
+      for Body_Suffix ("Asm_Cpp") use ".S";
+   end Naming;
+
+   package Compiler is
+      Common_Switches :=
+        ("-g",
+         "-O2",
+         "-ffunction-sections",
+         "-fdata-sections",
+         "-mcpu=cortex-m7",
+         "-mthumb",
+         "-mfpu=fpv5-d16",
+         "-mfloat-abi=hard");
+
+      Ada_Switches := Common_Switches &
+        ("-gnat2022",
+         "-gnatwa",
+         "-gnatw.X");
+
+      Asm_Switches := Common_Switches;
+
+      C_Switches := Common_Switches &
+        ("-std=c99",
+         "-Wall",
+         "-DLWIP_PROVIDE_ERRNO",
+         "-I" & Project'Project_Dir & "lwip_port",
+         "-I" & Project'Project_Dir & "lwip_port/arch",
+         "-I" & Project'Project_Dir & "lwip/src/include");
+
+      for Default_Switches ("Ada") use Ada_Switches;
+      for Default_Switches ("Asm_Cpp") use Asm_Switches;
+      for Default_Switches ("C") use C_Switches;
+   end Compiler;
+
+   package Linker is
+      for Default_Switches ("Ada") use
+        ("-Wl,--gc-sections",
+         "-Wl,--print-memory-usage",
+         "-Wl,--defsym=__stack_size=16384",
+         "-T", Project'Project_Dir & "stm32h753.ld",
+         "-nostartfiles");
+   end Linker;
+
+   package Builder is
+      for Switches ("Ada") use ("-j0");
+      for Executable_Suffix use ".elf";
+   end Builder;
+
+end Nucleo_H753_PV_Charger;

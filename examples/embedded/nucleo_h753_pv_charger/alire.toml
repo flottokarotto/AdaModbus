@@ -1,0 +1,14 @@
+name = "nucleo_h753_pv_charger"
+description = "PV surplus charging controller for Delta Wallbox + KSEM on NUCLEO-H753ZI"
+version = "1.0.0"
+
+authors = ["Florian Fischer"]
+licenses = "MIT"
+
+project-files = ["nucleo_h753_pv_charger.gpr"]
+
+[build-switches]
+"*".style_checks = "No"
+
+[[depends-on]]
+gnat_arm_elf = "^15"

@@ -1,0 +1,9 @@
+# LwIP (fetched by setup_lwip.sh)
+lwip/
+
+# Build artifacts
+obj/
+bin/
+
+# Alire local config
+alire/
