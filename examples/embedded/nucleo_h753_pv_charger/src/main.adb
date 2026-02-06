@@ -23,8 +23,7 @@
 with Interfaces;
 with Ada_Modbus;
 with Ada_Modbus.Energy.Delta_Charger;
-with System_Init;  --  Early hardware init (elaborated first)
-pragma Unreferenced (System_Init);
+with STM32H7_HAL;
 with Config;
 with HAL_Stubs;
 with KSEM_Client;
@@ -62,8 +61,12 @@ procedure Main is
 
    procedure Initialize_System is
    begin
-      --  Note: GPIO already initialized by System_Init during elaboration.
-      --  Initialize remaining peripherals.
+      --  Early hardware init (clock, SysTick, GPIO)
+      STM32H7_HAL.System_Init;
+      STM32H7_HAL.SysTick_Init;
+      STM32H7_HAL.GPIO_Init;
+
+      --  Initialize Ethernet/TCP
       HAL_Stubs.Ethernet_Initialize;
 
       --  Show splash screen (initializes I2C1 internally)

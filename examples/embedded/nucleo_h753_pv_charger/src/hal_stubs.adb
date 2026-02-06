@@ -133,10 +133,7 @@ package body HAL_Stubs is
         Unsigned_32 (Local_Gateway_C) * 65536 or
         Unsigned_32 (Local_Gateway_D) * 16777216;
    begin
-      --  Initialize Ethernet GPIO (done in ETH driver)
-      STM32H7_HAL.ETH_GPIO_Init;
-
-      --  Initialize TCP/IP stack
+      --  Initialize TCP/IP stack (Ethernet GPIO configured by LwIP ethernetif.c)
       TCP_Client.Initialize (Local_IP, Netmask, Gateway);
 
       Network_Initialized := True;

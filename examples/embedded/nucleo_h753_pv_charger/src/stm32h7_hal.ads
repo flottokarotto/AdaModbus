@@ -118,18 +118,4 @@ package STM32H7_HAL is
       Length  : Natural;
       Success : out Boolean);
 
-   ----------------------
-   --  Ethernet        --
-   ----------------------
-
-   --  Note: Full Ethernet/LwIP implementation requires significant code.
-   --  This provides the basic hardware initialization.
-   --  For full TCP support, integrate LwIP library.
-
-   procedure ETH_GPIO_Init;
-   procedure ETH_MAC_Init;
-
-   --  Simplified TCP client (placeholder for LwIP integration)
-   TCP_Connected : Boolean := False;
-
 end STM32H7_HAL;

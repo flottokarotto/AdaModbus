@@ -37,27 +37,6 @@ void ada_netif_add(struct netif *netif_struct,
 }
 
 /**
- * Get the global netif pointer
- */
-struct netif *ada_get_netif(void)
-{
-    return &g_netif;
-}
-
-/**
- * Simple delay function (busy wait)
- * Used during initialization
- */
-void delay_ms(uint32_t ms)
-{
-    /* Assuming ~64MHz clock, this is approximate */
-    volatile uint32_t count = ms * 16000;
-    while (count--) {
-        __asm__("nop");
-    }
-}
-
-/**
  * Ada tick callback (weak implementation, overridden by Ada)
  */
 uint32_t __attribute__((weak)) ada_get_tick_ms(void)
