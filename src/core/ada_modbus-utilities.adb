@@ -142,4 +142,30 @@ is
       return To_Unsigned_32 (Regs (Regs'First), Regs (Regs'First + 1), Order);
    end Registers_To_Unsigned_32;
 
+   ------------------
+   -- Status_Image --
+   ------------------
+
+   function Status_Image (S : Status) return Status_String is
+   begin
+      return (case S is
+         when Success                    => "Success                 ",
+         when Timeout                    => "Timeout                 ",
+         when CRC_Error                  => "CRC Error               ",
+         when LRC_Error                  => "LRC Error               ",
+         when Frame_Error                => "Frame Error             ",
+         when Invalid_Response           => "Invalid Response        ",
+         when Invalid_Request            => "Invalid Request         ",
+         when Buffer_Too_Small           => "Buffer Too Small        ",
+         when Not_Implemented            => "Not Implemented         ",
+         when Exception_Illegal_Function => "Illegal Function (01)   ",
+         when Exception_Illegal_Address  => "Illegal Address (02)    ",
+         when Exception_Illegal_Value    => "Illegal Value (03)      ",
+         when Exception_Slave_Failure    => "Slave Failure (04)      ",
+         when Exception_Acknowledge      => "Acknowledge (05)        ",
+         when Exception_Slave_Busy       => "Slave Busy (06)         ",
+         when Exception_Gateway_Path     => "Gateway Path (10)       ",
+         when Exception_Gateway_Target   => "Gateway Target (11)     ");
+   end Status_Image;
+
 end Ada_Modbus.Utilities;

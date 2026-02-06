@@ -244,6 +244,28 @@ package body Test_Utilities is
       Assert (Low = 16#1234#, "CDAB Low should be 0x1234");
    end Test_From_Unsigned_32_All_Orders;
 
+   --  Test: Status_Image returns non-empty strings
+   procedure Test_Status_Image (T : in Out Test_Case'Class);
+   procedure Test_Status_Image (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Img : Status_String;
+   begin
+      Img := Status_Image (Success);
+      Assert (Img (1 .. 7) = "Success", "Success image");
+
+      Img := Status_Image (Timeout);
+      Assert (Img (1 .. 7) = "Timeout", "Timeout image");
+
+      Img := Status_Image (CRC_Error);
+      Assert (Img (1 .. 9) = "CRC Error", "CRC_Error image");
+
+      Img := Status_Image (Exception_Illegal_Function);
+      Assert (Img (1 .. 16) = "Illegal Function", "Exception image");
+
+      Img := Status_Image (Exception_Gateway_Target);
+      Assert (Img (1 .. 14) = "Gateway Target", "Gateway target image");
+   end Test_Status_Image;
+
    overriding procedure Register_Tests (T : in Out Utilities_Test_Case) is
    begin
       Registration.Register_Routine (T, Test_To_Big_Endian'Access, "To_Big_Endian");
@@ -259,6 +281,7 @@ package body Test_Utilities is
       Registration.Register_Routine (T, Test_32bit_From_Array'Access, "32-bit from Register_Array");
       Registration.Register_Routine (T, Test_32bit_Round_Trip'Access, "32-bit round-trip (all orders)");
       Registration.Register_Routine (T, Test_From_Unsigned_32_All_Orders'Access, "From_Unsigned_32 (all orders)");
+      Registration.Register_Routine (T, Test_Status_Image'Access, "Status_Image");
    end Register_Tests;
 
    function Suite return AUnit.Test_Suites.Access_Test_Suite is

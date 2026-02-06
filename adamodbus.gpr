@@ -49,7 +49,11 @@ project Adamodbus is
       "Ada_Modbus.Energy.SunSpec.Settings",
       "Ada_Modbus.Energy.SunSpec.DER",
       "Ada_Modbus.Energy.SunSpec.Battery",
-      "Ada_Modbus.Energy.Go_E");
+      "Ada_Modbus.Energy.Go_E",
+      "Ada_Modbus.Energy.Delta_Charger",
+      "Ada_Modbus.Energy.Kostal",
+      "Ada_Modbus.Energy.KSEM",
+      "Ada_Modbus.Gateway");
 
    type Build_Mode_Type is ("debug", "release");
    Build_Mode : Build_Mode_Type := external ("ADAMODBUS_BUILD_MODE", "debug");
@@ -108,6 +112,12 @@ project Adamodbus is
             for Switches ("ada_modbus-energy-sg_ready.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
             for Switches ("ada_modbus-energy-grid_control.ads") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
             for Switches ("ada_modbus-energy-grid_control.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
+            for Switches ("ada_modbus-energy-kostal.ads") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
+            for Switches ("ada_modbus-energy-kostal.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
+            for Switches ("ada_modbus-energy-ksem.ads") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
+            for Switches ("ada_modbus-energy-ksem.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
+            for Switches ("ada_modbus-gateway.ads") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
+            for Switches ("ada_modbus-gateway.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
       end case;
    end Compiler;
 

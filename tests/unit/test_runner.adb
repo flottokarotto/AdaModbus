@@ -18,6 +18,7 @@ with Test_Master;
 with Test_Async;
 with Test_SunSpec;
 with Test_Delta_Charger;
+with Test_Gateway;
 
 procedure Test_Runner is
 
@@ -47,6 +48,9 @@ procedure Test_Runner is
       --  Energy management tests
       S.Add_Test (Test_SunSpec.Suite);
       S.Add_Test (Test_Delta_Charger.Suite);
+
+      --  Gateway tests
+      S.Add_Test (Test_Gateway.Suite);
 
       return S;
    end Suite;

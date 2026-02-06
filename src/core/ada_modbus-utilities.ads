@@ -50,4 +50,8 @@ is
       Order : Word_Order := Big_Endian) return Interfaces.Unsigned_32
      with Pre => Regs'Length >= 2;
 
+   --  Human-readable status string (for logging/display)
+   subtype Status_String is String (1 .. 24);
+   function Status_Image (S : Status) return Status_String;
+
 end Ada_Modbus.Utilities;
