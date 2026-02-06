@@ -40,6 +40,12 @@ is
          return;
       end if;
 
+      --  Validate PDU length (Parse_Frame has no postcondition on PDU_Length)
+      if PDU_Len > Protocol.Max_PDU_Size then
+         Result := Frame_Error;
+         return;
+      end if;
+
       --  Check that PDU fits in RTU frame
       if PDU_Len + 3 > Protocol.RTU.Max_ADU_Size then
          Result := Buffer_Too_Small;
@@ -86,6 +92,12 @@ is
          Result     => Result);
 
       if Result /= Success then
+         return;
+      end if;
+
+      --  Validate PDU length (Parse_Frame has no postcondition on PDU_Length)
+      if PDU_Len > Protocol.Max_PDU_Size then
+         Result := Frame_Error;
          return;
       end if;
 
