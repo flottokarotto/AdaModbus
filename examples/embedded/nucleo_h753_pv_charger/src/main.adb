@@ -219,7 +219,6 @@ procedure Main is
       end case;
 
       --  Update LEDs
-      HAL_Stubs.Toggle_LED (HAL_Stubs.LED_Green);  --  Heartbeat
       HAL_Stubs.Set_LED (HAL_Stubs.LED_Blue, State = Charging);
       HAL_Stubs.Set_LED (HAL_Stubs.LED_Red, State = Error);
    end Update_Display;

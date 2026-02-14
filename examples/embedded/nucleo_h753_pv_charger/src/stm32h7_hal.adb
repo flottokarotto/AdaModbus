@@ -631,6 +631,11 @@ package body STM32H7_HAL is
    procedure SysTick_Handler is
    begin
       Tick_Counter := Tick_Counter + 1;
+
+      --  Heartbeat: toggle green LED (PB0) every 500 ms
+      if Tick_Counter mod 500 = 0 then
+         GPIO_Toggle (Port_B, 0);
+      end if;
    end SysTick_Handler;
 
 end STM32H7_HAL;
