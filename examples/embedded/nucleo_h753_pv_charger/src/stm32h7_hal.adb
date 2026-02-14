@@ -2,11 +2,11 @@
 --  Copyright (c) 2026 Florian Fischer
 --  SPDX-License-Identifier: MIT
 
-with A0B.STM32H753.SVD.RCC;   use A0B.STM32H753.SVD.RCC;
-with A0B.STM32H753.SVD.GPIO;  use A0B.STM32H753.SVD.GPIO;
-with A0B.STM32H753.SVD.USART; use A0B.STM32H753.SVD.USART;
-with A0B.STM32H753.SVD.I2C;   use A0B.STM32H753.SVD.I2C;
-with A0B.Types.SVD;           use A0B.Types.SVD;
+with STM32H753.RCC;   use STM32H753.RCC;
+with STM32H753.GPIO;  use STM32H753.GPIO;
+with STM32H753.USART; use STM32H753.USART;
+with STM32H753.I2C;   use STM32H753.I2C;
+with STM32H753;       use STM32H753;
 with System;
 
 package body STM32H7_HAL is
@@ -37,10 +37,10 @@ package body STM32H7_HAL is
    SysTick_CTRL_CLKSOURCE : constant := 2 ** 2;
 
    --  GPIO Mode constants for MODER register (2 bits per pin)
-   GPIO_Mode_Val_Input  : constant A0B.Types.SVD.UInt2 := 2#00#;
-   GPIO_Mode_Val_Output : constant A0B.Types.SVD.UInt2 := 2#01#;
-   GPIO_Mode_Val_AF     : constant A0B.Types.SVD.UInt2 := 2#10#;
-   GPIO_Mode_Val_Analog : constant A0B.Types.SVD.UInt2 := 2#11#;
+   GPIO_Mode_Val_Input  : constant STM32H753.UInt2 := 2#00#;
+   GPIO_Mode_Val_Output : constant STM32H753.UInt2 := 2#01#;
+   GPIO_Mode_Val_AF     : constant STM32H753.UInt2 := 2#10#;
+   GPIO_Mode_Val_Analog : constant STM32H753.UInt2 := 2#11#;
 
    -----------------
    -- System_Init --
@@ -137,7 +137,7 @@ package body STM32H7_HAL is
       Pin  : GPIO_Pin;
       Mode : GPIO_Mode)
    is
-      Mode_Val : A0B.Types.SVD.UInt2;
+      Mode_Val : STM32H753.UInt2;
       Reg      : MODER_Register;
    begin
       case Mode is
@@ -172,7 +172,7 @@ package body STM32H7_HAL is
       Pin  : GPIO_Pin;
       AF   : GPIO_AF)
    is
-      AF_Val : constant A0B.Types.SVD.UInt4 := A0B.Types.SVD.UInt4 (AF);
+      AF_Val : constant STM32H753.UInt4 := STM32H753.UInt4 (AF);
    begin
       if Pin <= 7 then
          case Port is
@@ -313,8 +313,8 @@ package body STM32H7_HAL is
       --  BRR register is split: bits 0-3 (fraction), bits 4-15 (mantissa)
       BRR_Val := APB1_Clock_Hz / Baud_Rate;
       USART3_Periph.BRR := (
-         BRR_0_3  => A0B.Types.SVD.UInt4 (BRR_Val and 16#F#),
-         BRR_4_15 => A0B.Types.SVD.UInt12 (Shift_Right (BRR_Val, 4) and 16#FFF#),
+         BRR_0_3  => STM32H753.UInt4 (BRR_Val and 16#F#),
+         BRR_4_15 => STM32H753.UInt12 (Shift_Right (BRR_Val, 4) and 16#FFF#),
          others   => <>
       );
 
@@ -336,7 +336,7 @@ package body STM32H7_HAL is
       while not USART3_Periph.ISR.TXE loop
          null;
       end loop;
-      USART3_Periph.TDR := (TDR => A0B.Types.SVD.UInt9 (Data), others => <>);
+      USART3_Periph.TDR := (TDR => STM32H753.UInt9 (Data), others => <>);
    end USART3_Send_Byte;
 
    -----------------
@@ -530,8 +530,8 @@ package body STM32H7_HAL is
 
       --  Configure transfer: SADD, NBYTES, START, AUTOEND
       I2C1_Periph.CR2 := (
-         SADD    => (As_Array => False, Val => A0B.Types.SVD.UInt10 (Address)),
-         NBYTES  => A0B.Types.SVD.Byte (Data'Length),
+         SADD    => (As_Array => False, Val => STM32H753.UInt10 (Address)),
+         NBYTES  => STM32H753.Byte (Data'Length),
          START   => True,
          AUTOEND => True,
          RD_WRN  => False,  -- Write
@@ -546,7 +546,7 @@ package body STM32H7_HAL is
                return;
             end if;
          end loop;
-         I2C1_Periph.TXDR := (TXDATA => A0B.Types.SVD.Byte (Data (I)), others => <>);
+         I2C1_Periph.TXDR := (TXDATA => STM32H753.Byte (Data (I)), others => <>);
       end loop;
 
       --  Wait for transfer complete or STOP
@@ -588,8 +588,8 @@ package body STM32H7_HAL is
 
       --  Configure read transfer
       I2C1_Periph.CR2 := (
-         SADD    => (As_Array => False, Val => A0B.Types.SVD.UInt10 (Address)),
-         NBYTES  => A0B.Types.SVD.Byte (Length),
+         SADD    => (As_Array => False, Val => STM32H753.UInt10 (Address)),
+         NBYTES  => STM32H753.Byte (Length),
          START   => True,
          AUTOEND => True,
          RD_WRN  => True,  -- Read
