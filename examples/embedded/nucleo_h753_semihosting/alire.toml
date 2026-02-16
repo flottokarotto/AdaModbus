@@ -1,0 +1,14 @@
+name = "nucleo_h753_ksem_test"
+description = "Minimal KSEM Modbus TCP test for NUCLEO-H753ZI"
+version = "1.0.0"
+
+authors = ["Florian Fischer"]
+licenses = "MIT"
+
+project-files = ["nucleo_h753_semihosting.gpr"]
+
+[build-switches]
+"*".style_checks = "No"
+
+[[depends-on]]
+gnat_arm_elf = "^15"

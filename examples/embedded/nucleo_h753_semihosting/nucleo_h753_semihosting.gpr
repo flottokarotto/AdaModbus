@@ -1,0 +1,111 @@
+--  NUCLEO-H753ZI KSEM Semihosting Test - GPR Project
+--
+--  Minimal Modbus TCP test using ARM semihosting output.
+--  No RS485 shield or OLED display required - just the NUCLEO board.
+--
+--  Hardware:
+--    - NUCLEO-H753ZI (STM32H753ZI, Cortex-M7, 480 MHz)
+--    - LAN8742A Ethernet PHY (onboard)
+--
+--  Prerequisites:
+--    git submodule update --init examples/embedded/nucleo_h753_semihosting/STM32CubeH7
+--    git submodule update --init examples/embedded/nucleo_h753_semihosting/lwip
+--
+--  Build:
+--    gprbuild -P nucleo_h753_semihosting.gpr
+--
+--  Run:
+--    ./run_semihosting.sh
+
+project Nucleo_H753_Semihosting is
+
+   type Runtime_Type is ("light-cortex-m7f", "zfp-cortex-m7f");
+   Runtime : Runtime_Type := external ("RUNTIME", "light-cortex-m7f");
+
+   --  STM32CubeH7 submodule paths (headers only, sources via #include wrappers)
+   Cube_Dir      := Project'Project_Dir & "STM32CubeH7/";
+   HAL_Inc_Dir   := Cube_Dir & "Drivers/STM32H7xx_HAL_Driver/Inc";
+   CMSIS_Core    := Cube_Dir & "Drivers/CMSIS/Core/Include";
+   CMSIS_Device  := Cube_Dir & "Drivers/CMSIS/Device/ST/STM32H7xx/Include";
+   LAN8742_Dir   := Cube_Dir & "Drivers/BSP/Components/lan8742";
+
+   for Source_Dirs use
+     ("src",
+      "src/svd",
+      "../../../src/core",
+      "../../../src/energy",
+      "lwip_port",
+      --  LwIP submodule
+      "lwip/src/core",
+      "lwip/src/core/ipv4",
+      "lwip/src/api",
+      "lwip/src/netif",
+      "lwip/src/include",
+      "lwip/src/include/lwip",
+      "lwip/src/include/netif",
+      "lwip/src/include/lwip/priv",
+      "lwip_port/arch");
+
+   for Object_Dir use "obj";
+   for Exec_Dir use "bin";
+   for Main use ("main.adb");
+   for Target use "arm-eabi";
+   for Runtime ("Ada") use Runtime;
+   for Languages use ("Ada", "Asm_Cpp", "C");
+
+   package Naming is
+      for Body_Suffix ("Asm_Cpp") use ".S";
+   end Naming;
+
+   package Compiler is
+      Common_Switches :=
+        ("-g",
+         "-O2",
+         "-ffunction-sections",
+         "-fdata-sections",
+         "-mcpu=cortex-m7",
+         "-mthumb",
+         "-mfpu=fpv5-d16",
+         "-mfloat-abi=hard");
+
+      Ada_Switches := Common_Switches &
+        ("-gnat2022",
+         "-gnatwa",
+         "-gnatw.X");
+
+      Asm_Switches := Common_Switches;
+
+      C_Switches := Common_Switches &
+        ("-std=c99",
+         "-Wall",
+         "-Wno-unused-parameter",
+         "-DSTM32H753xx",
+         "-DLWIP_PROVIDE_ERRNO",
+         "-I" & Project'Project_Dir & "lwip_port",
+         "-I" & Project'Project_Dir & "lwip_port/arch",
+         "-I" & Project'Project_Dir & "lwip/src/include",
+         "-I" & CMSIS_Core,
+         "-I" & CMSIS_Device,
+         "-I" & HAL_Inc_Dir,
+         "-I" & LAN8742_Dir);
+
+      for Default_Switches ("Ada") use Ada_Switches;
+      for Default_Switches ("Asm_Cpp") use Asm_Switches;
+      for Default_Switches ("C") use C_Switches;
+   end Compiler;
+
+   package Linker is
+      for Default_Switches ("Ada") use
+        ("-Wl,--gc-sections",
+         "-Wl,--print-memory-usage",
+         "-Wl,--defsym=__stack_size=16384",
+         "-T", Project'Project_Dir & "stm32h753.ld",
+         "-nostartfiles");
+   end Linker;
+
+   package Builder is
+      for Switches ("Ada") use ("-j0");
+      for Executable_Suffix use ".elf";
+   end Builder;
+
+end Nucleo_H753_Semihosting;

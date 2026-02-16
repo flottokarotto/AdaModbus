@@ -4,3 +4,9 @@
 [submodule "examples/embedded/cortex_m4_tls/mbedtls"]
 	path = examples/embedded/cortex_m4_tls/mbedtls
 	url = https://github.com/Mbed-TLS/mbedtls.git
+[submodule "examples/embedded/nucleo_h753_semihosting/STM32CubeH7"]
+	path = examples/embedded/nucleo_h753_semihosting/STM32CubeH7
+	url = https://github.com/STMicroelectronics/STM32CubeH7.git
+[submodule "examples/embedded/nucleo_h753_semihosting/lwip"]
+	path = examples/embedded/nucleo_h753_semihosting/lwip
+	url = https://github.com/lwip-tcpip/lwip.git
