@@ -1,8 +1,16 @@
 /**
  * stm32h7xx_hal_conf.h - HAL configuration for NUCLEO-H753ZI Ethernet
  *
- * Based on STM32CubeH7 LwIP examples.
- * Enables only the modules needed for Ethernet + LwIP.
+ * Based on: STM32CubeH7/Projects/STM32H743I-EVAL/Applications/LwIP/
+ *           LwIP_TCP_Echo_Server/Inc/stm32h7xx_hal_conf.h
+ * Adapted: Stripped down to only enable modules needed for Ethernet:
+ *          HAL, CORTEX, ETH, GPIO, RCC.  All other HAL modules (UART,
+ *          SPI, I2C, DMA, etc.) are disabled to reduce compile time and
+ *          code size.  UART is handled by the Ada HAL (stm32h7_hal.adb).
+ *
+ * Oscillator values match the NUCLEO-H753ZI board:
+ *   HSE = 25 MHz (ST-Link MCO), HSI = 64 MHz (used, no PLL).
+ * Ethernet MAC address and descriptor counts are configured here.
  */
 #ifndef STM32H7XX_HAL_CONF_H
 #define STM32H7XX_HAL_CONF_H

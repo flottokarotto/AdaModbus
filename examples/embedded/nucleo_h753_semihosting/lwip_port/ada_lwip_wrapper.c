@@ -1,9 +1,16 @@
 /**
  * ada_lwip_wrapper.c - C Wrapper Functions for Ada LwIP Bindings
  *
- * Provides simplified C functions that can be called from Ada.
- * Uses uint32_t for IP addresses to avoid struct-by-value ABI issues
- * between Ada and C on ARM.
+ * Wraps lwIP's netif_add() into a simplified C function callable from
+ * Ada (see lwip_bindings.ads).  Needed because netif_add() takes
+ * function pointers (init/input callbacks) that are hard to express
+ * in Ada without access-to-subprogram overhead.
+ *
+ * IMPORTANT: IP addresses are passed as uint32_t, NOT as ip4_addr_t
+ * structs.  GNAT ARM and GCC ARM disagree on how to pass a 4-byte
+ * struct by value in registers (ARM EABI composite type rules), which
+ * resulted in garbled IP addresses (e.g. 24.2.0.36 instead of
+ * 192.168.42.5).  Using plain uint32_t avoids this ABI mismatch.
  */
 
 #include "lwip/init.h"

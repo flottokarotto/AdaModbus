@@ -1,7 +1,13 @@
 /**
  * uart_debug.c - C wrappers for UART debug output
  *
- * Calls Ada's USART3 send routine directly for debug messages from C code.
+ * Provides uart_put(), uart_put_line(), uart_put_int(), uart_put_hex()
+ * for debug messages from C code (ethernetif.c init, link status, etc.).
+ *
+ * Calls Ada's USART3 send routine directly using the GNAT mangled name
+ * stm32h7_hal__usart3_send_byte (defined in stm32h7_hal.adb).  This
+ * avoids a separate C UART driver -- the Ada HAL already configures
+ * USART3 on PD8/PD9 (ST-Link VCP) at 115200 8N1.
  */
 #include <stdint.h>
 #include <stddef.h>

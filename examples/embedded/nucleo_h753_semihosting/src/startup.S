@@ -1,8 +1,26 @@
 /**
- * startup.S - Minimal STM32H753 Vector Table
+ * startup.S - Minimal STM32H753 Vector Table and Boot Code
  *
- * Only provides the vector table and Reset_Handler.
- * Delegates to GNAT runtime's _start for actual initialization.
+ * Self-written, based on the pattern from:
+ *   examples/embedded/nucleo_h753_pv_charger/src/startup.S
+ *   (same hardware, same boot requirements)
+ *
+ * Does NOT use GNAT's crt0/runtime startup -- we bypass it entirely
+ * because the Light runtime's default startup doesn't handle the
+ * STM32H7's multi-bank SRAM layout (.bss in SRAM1, .data in DTCM).
+ *
+ * Reset_Handler performs:
+ *   1. Set MSP to _estack (top of DTCM)
+ *   2. Enable FPU (Cortex-M7 has hardware FPU, needed by Ada)
+ *   3. Copy .data from Flash to DTCM
+ *   4. Zero .bss in SRAM1
+ *   5. Branch to main (Ada elaboration + application)
+ *
+ * SysTick_Handler calls both:
+ *   - Ada's stm32h7_hal__systick_handler (LED blink, timing)
+ *   - ST HAL's HAL_IncTick (HAL_Delay, ETH timeouts)
+ *
+ * HardFault_Handler turns on red LED (PB14) for visual crash indication.
  */
 
     .syntax unified

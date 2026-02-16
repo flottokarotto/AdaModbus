@@ -1,14 +1,26 @@
 /**
  * ethernetif.c - Ethernet network interface driver for lwIP
- *
- * Based on: STM32CubeH7/Projects/STM32H743I-EVAL/Applications/LwIP/
- *           LwIP_TCP_Echo_Server/Src/ethernetif.c
  * Copyright (c) 2017 STMicroelectronics. All rights reserved.
  * License: BSD-3-Clause
  *
- * Adapted for NUCLEO-H753ZI:
- *   - GPIO pin mapping: PB13 for ETH_TXD1 (instead of PG12 on EVAL board)
- *   - LAN8742 include path adjusted for project layout
+ * Origin:
+ *   Copied from STM32CubeH7/Projects/STM32H743I-EVAL/Applications/LwIP/
+ *   LwIP_TCP_Echo_Server/Src/ethernetif.c (the only H7 LwIP example with
+ *   zero-copy RX using LWIP_SUPPORT_CUSTOM_PBUF).  The H743I-EVAL was
+ *   chosen because it uses the same LAN8742A PHY as NUCLEO-H753ZI.
+ *   Ada_Drivers_Library was evaluated but has no STM32H7 Ethernet support.
+ *
+ * Adaptations for NUCLEO-H753ZI:
+ *   - HAL_ETH_MspInit GPIO: PB13 for ETH_TXD1 (EVAL uses PG12)
+ *   - LAN8742 #include path adjusted for project layout
+ *   - Added Ada-callable helpers: ethernetif_set_netif(),
+ *     ethernetif_link_status(), frame counter getters
+ *   - uart_put/uart_put_int debug output during ETH/PHY init
+ *   - Software checksums (ETH_CHECKSUM_DISABLE in TxConfig) since we
+ *     run at HSI 64 MHz without full HAL_Init clock setup
+ *
+ * All other code (DMA descriptors, zero-copy RX pool, HAL_ETH callbacks,
+ * link negotiation) is unchanged from the ST reference.
  */
 
 #include "stm32h7xx_hal.h"

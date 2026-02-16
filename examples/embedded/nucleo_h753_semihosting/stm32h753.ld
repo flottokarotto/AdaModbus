@@ -1,15 +1,25 @@
 /*
- * STM32H753ZI Linker Script
- * For NUCLEO-H753ZI Board
+ * STM32H753ZI Linker Script for NUCLEO-H753ZI Board
+ *
+ * Self-written, guided by:
+ *   STM32CubeH7/Projects/STM32H743I-EVAL/Applications/LwIP/
+ *   LwIP_TCP_Echo_Server/STM32H743I_EVAL/STM32H743XIHx_FLASH.ld
+ *   and the STM32H753ZI reference manual (RM0433) memory map.
+ *
+ * Key design decisions:
+ *   - .data in DTCM (0x20000000): fastest CPU access (zero wait state)
+ *   - .bss in SRAM1 (0x24000000): DMA-accessible for ETH and LwIP pools
+ *     (DTCM is CPU-only, NOT accessible by Ethernet DMA controller!)
+ *   - ETH DMA sections in SRAM2 (0x30000000): required by HAL ETH driver
+ *     (.RxDescripSection, .TxDescripSection, .Rx_PoolSection)
+ *   - LwIP heap at 0x30004000 (SRAM2, set via LWIP_RAM_HEAP_POINTER)
+ *   - Stack 16 KB, Heap 64 KB in DTCM
  *
  * Memory Map:
  *   Flash: 2 MB (0x08000000 - 0x08200000)
  *   DTCM:  128 KB @ 0x20000000 (fast, CPU-only, no DMA)
  *   SRAM1: 256 KB @ 0x24000000 (AXI SRAM, DMA-accessible)
  *   SRAM2: 128 KB @ 0x30000000 (D2 SRAM, ETH DMA-accessible)
- *
- * Ethernet DMA requires descriptors and buffers in SRAM2 (0x30000000).
- * Based on STM32CubeH7 LwIP examples.
  */
 
 MEMORY

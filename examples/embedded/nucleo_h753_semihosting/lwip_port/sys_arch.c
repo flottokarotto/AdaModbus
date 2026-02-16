@@ -1,8 +1,19 @@
 /**
- * sys_arch.c - LwIP System Architecture for NO_SYS mode
+ * sys_arch.c - LwIP System Architecture for NO_SYS bare-metal mode
  *
- * Minimal sys_arch for bare-metal (NO_SYS=1) operation.
- * Note: sys_now() is provided by ethernetif.c (calls HAL_GetTick).
+ * Self-written (not from STM32CubeH7).
+ * Reason: LwIP's NO_SYS=1 mode requires a sys_arch implementation, but
+ *         the ST examples only provide RTOS-based versions (FreeRTOS).
+ *         For bare-metal, we need minimal C library stubs that newlib's
+ *         nano libc doesn't provide in our link configuration.
+ *
+ * Provides:
+ *   - rand()/srand() -- needed by LwIP for TCP ISN generation
+ *   - strlen()       -- needed by LwIP internally
+ *   - printf()/puts() -- stubs (LwIP LWIP_PLATFORM_DIAG references these)
+ *
+ * Note: sys_now() is provided by ethernetif.c (returns HAL_GetTick()),
+ * keeping all time-related functions close to the ETH driver.
  */
 
 #include <stdarg.h>

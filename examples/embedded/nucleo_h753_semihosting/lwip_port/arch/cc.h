@@ -1,7 +1,12 @@
 /**
- * cc.h - Compiler/Platform abstraction for LwIP
+ * cc.h - Compiler/Platform abstraction for LwIP on ARM Cortex-M7
  * Copyright (c) 2026 Florian Fischer
  * SPDX-License-Identifier: MIT
+ *
+ * Self-written, based on LwIP's doc/sys_arch.txt requirements.
+ * Defines the platform types (u8_t, u16_t, etc.), byte order,
+ * struct packing macros, and diagnostic hooks that LwIP needs
+ * from each target platform.  Standard for any LwIP port.
  */
 
 #ifndef CC_H

@@ -3,7 +3,18 @@
  * Copyright (c) 2026 Florian Fischer
  * SPDX-License-Identifier: MIT
  *
- * Optimized for Modbus TCP client with minimal footprint.
+ * Self-written, guided by:
+ *   STM32CubeH7/Projects/STM32H743I-EVAL/Applications/LwIP/
+ *   LwIP_TCP_Echo_Server/Inc/lwipopts.h
+ *
+ * Optimized for a single Modbus TCP client connection (~260 byte frames):
+ *   - NO_SYS=1 (bare-metal, no RTOS)
+ *   - Static IP (no DHCP)
+ *   - Callback API only (no socket/netconn)
+ *   - Small TCP MSS/window (512 bytes, sufficient for Modbus)
+ *   - LwIP heap relocated to SRAM2 (0x30004000) for ETH DMA access
+ *   - Software checksums (hardware offload disabled for debugging)
+ *   - Custom pbuf support for zero-copy RX (LWIP_SUPPORT_CUSTOM_PBUF)
  */
 
 #ifndef LWIPOPTS_H

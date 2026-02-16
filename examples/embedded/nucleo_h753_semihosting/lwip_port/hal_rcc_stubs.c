@@ -1,10 +1,16 @@
 /**
  * hal_rcc_stubs.c - Minimal RCC stubs for ETH driver
  *
- * The full stm32h7xx_hal_rcc.c is very large and pulls in PWR dependencies.
- * We only need HAL_RCC_GetHCLKFreq() for MDIO clock divider calculation.
+ * Provides: HAL_RCC_GetHCLKFreq()
+ * Replaces: STM32CubeH7/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c
+ * Reason: The full RCC driver is >2000 lines and pulls in PWR, PLL, and
+ *         clock-tree dependencies that we don't need.  The only function
+ *         required is HAL_RCC_GetHCLKFreq(), called by HAL_ETH_Init() to
+ *         compute the MDIO clock divider (ETH_MACMDIOAR.CR field).
  *
- * Running at HSI default (64 MHz, no PLL configured).
+ * This board runs at HSI default (64 MHz, no PLL configured), so we
+ * simply return HSI_VALUE.  If the clock tree is reconfigured later,
+ * this stub must be updated accordingly.
  */
 #include "stm32h7xx_hal.h"
 
