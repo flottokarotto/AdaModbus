@@ -10,10 +10,10 @@ package body KSEM_Client is
 
    --  KSEM SunSpec Register Addresses
    --  Based on SunSpec Model 203 (Three Phase Wye Meter)
-   --  Layout: [2-reg header] [data block: 105 regs]
-   --  Offsets include the 2-register model header (ID + Length)
-   --  Note: For KSEM firmware >= 2.6.0, base address is 40070 instead
-   KSEM_Base_Address : constant Register_Address := 40069;  --  Model 203 header
+   --  Layout: SunSpec header (40000..40001) + Model 1 Common (66 regs) +
+   --          Model 203 header at 40070 + data block (105 regs)
+   --  Offsets below include the 2-register model header (ID + Length)
+   KSEM_Base_Address : constant Register_Address := 40070;  --  Model 203 header
    Reg_Total_Power   : constant Register_Address := KSEM_Base_Address + 18;  --  W (INT16 * SF)
    Reg_Phase_Power_A : constant Register_Address := KSEM_Base_Address + 19;  --  WphA
    pragma Unreferenced (Reg_Phase_Power_A);  --  Read as consecutive block from Reg_Total_Power
