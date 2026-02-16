@@ -1,8 +1,8 @@
---  Config - KSEM Semihosting Test Configuration
+--  Config - KSEM Test Configuration
 --  Copyright (c) 2026 Florian Fischer
 --  SPDX-License-Identifier: MIT
 --
---  Network configuration for KSEM semihosting test.
+--  Network configuration for NUCLEO-H753ZI KSEM test.
 --  Modify this file to match your installation.
 
 with Interfaces; use Interfaces;

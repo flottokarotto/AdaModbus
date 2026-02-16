@@ -16,8 +16,8 @@ them via USART3 serial console (ST-Link VCP, 115200 8N1).
 ./setup.sh
 
 # Or manually:
-git submodule update --init --depth 1 examples/embedded/nucleo_h753_semihosting/STM32CubeH7
-git submodule update --init examples/embedded/nucleo_h753_semihosting/lwip
+git submodule update --init --depth 1 examples/embedded/nucleo_h753_ksem_test/STM32CubeH7
+git submodule update --init examples/embedded/nucleo_h753_ksem_test/lwip
 ```
 
 ## Build

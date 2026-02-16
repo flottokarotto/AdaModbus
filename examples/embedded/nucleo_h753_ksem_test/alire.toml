@@ -5,7 +5,7 @@ version = "1.0.0"
 authors = ["Florian Fischer"]
 licenses = "MIT"
 
-project-files = ["nucleo_h753_semihosting.gpr"]
+project-files = ["nucleo_h753_ksem_test.gpr"]
 
 [build-switches]
 "*".style_checks = "No"

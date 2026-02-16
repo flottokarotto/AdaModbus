@@ -1,6 +1,7 @@
---  NUCLEO-H753ZI KSEM Semihosting Test - GPR Project
+--  NUCLEO-H753ZI KSEM Test - GPR Project
 --
---  Minimal Modbus TCP test using ARM semihosting output.
+--  Minimal Modbus TCP test reading Kostal Smart Energy Meter (KSEM).
+--  Output via USART3 serial console (ST-Link VCP, 115200 8N1).
 --  No RS485 shield or OLED display required - just the NUCLEO board.
 --
 --  Hardware:
@@ -8,16 +9,16 @@
 --    - LAN8742A Ethernet PHY (onboard)
 --
 --  Prerequisites:
---    git submodule update --init examples/embedded/nucleo_h753_semihosting/STM32CubeH7
---    git submodule update --init examples/embedded/nucleo_h753_semihosting/lwip
+--    git submodule update --init examples/embedded/nucleo_h753_ksem_test/STM32CubeH7
+--    git submodule update --init examples/embedded/nucleo_h753_ksem_test/lwip
 --
 --  Build:
---    gprbuild -P nucleo_h753_semihosting.gpr
+--    alr build
 --
---  Run:
---    ./run_semihosting.sh
+--  Flash & Monitor:
+--    ./flash.sh
 
-project Nucleo_H753_Semihosting is
+project Nucleo_H753_KSEM_Test is
 
    type Runtime_Type is ("light-cortex-m7f", "zfp-cortex-m7f");
    Runtime : Runtime_Type := external ("RUNTIME", "light-cortex-m7f");
@@ -108,4 +109,4 @@ project Nucleo_H753_Semihosting is
       for Executable_Suffix use ".elf";
    end Builder;
 
-end Nucleo_H753_Semihosting;
+end Nucleo_H753_KSEM_Test;

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Setup submodules for NUCLEO-H753ZI Semihosting Test
+# Setup submodules for NUCLEO-H753ZI KSEM Test
 #
 # Usage: ./setup.sh
 #
@@ -15,7 +15,7 @@ echo "Initializing submodules..."
 
 # Initialize STM32CubeH7 (top-level)
 cd "$REPO_ROOT"
-git submodule update --init examples/embedded/nucleo_h753_semihosting/STM32CubeH7
+git submodule update --init examples/embedded/nucleo_h753_ksem_test/STM32CubeH7
 
 # Initialize only the needed nested submodules within STM32CubeH7
 # (the full repo has ~50 BSP components we don't need)
@@ -27,9 +27,9 @@ git submodule update --init \
 
 # Initialize LwIP
 cd "$REPO_ROOT"
-git submodule update --init examples/embedded/nucleo_h753_semihosting/lwip
+git submodule update --init examples/embedded/nucleo_h753_ksem_test/lwip
 
 echo ""
 echo "Done. You can now build:"
 echo "  cd $SCRIPT_DIR"
-echo "  gprbuild -P nucleo_h753_semihosting.gpr -p"
+echo "  alr build"
