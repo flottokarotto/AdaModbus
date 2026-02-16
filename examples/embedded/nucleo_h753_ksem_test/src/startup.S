@@ -1,9 +1,8 @@
 /**
  * startup.S - Minimal STM32H753 Vector Table and Boot Code
  *
- * Self-written, based on the pattern from:
- *   examples/embedded/nucleo_h753_pv_charger/src/startup.S
- *   (same hardware, same boot requirements)
+ * Self-written, based on ARM Cortex-M7 startup conventions and the
+ * STM32H753ZI reference manual (RM0433) vector table layout.
  *
  * Does NOT use GNAT's crt0/runtime startup -- we bypass it entirely
  * because the Light runtime's default startup doesn't handle the
