@@ -99,12 +99,14 @@ package LwIP_Bindings is
    type Netif_Input_Fn is access function (P : Pbuf_Ptr; N : Netif_Ptr) return Err_T
      with Convention => C;
 
-   --  Add network interface (simplified binding)
+   --  Add network interface (simplified binding).
+   --  Takes raw uint32 IPs (not ip4_addr_t structs) to avoid
+   --  ARM ABI struct-by-value mismatch between GNAT and GCC.
    procedure Netif_Add
      (Netif_Struct : Netif_Ptr;
-      IP_Addr      : IP4_Addr_T;
-      Netmask      : IP4_Addr_T;
-      Gateway      : IP4_Addr_T)
+      IP_Addr      : Unsigned_32;
+      Netmask      : Unsigned_32;
+      Gateway      : Unsigned_32)
      with Import, Convention => C, External_Name => "ada_netif_add";
 
    --  Set default network interface

@@ -17,7 +17,7 @@ g_pfnVectors:
     .word _estack               /* Initial SP */
     .word Reset_Handler         /* Reset */
     .word Default_Handler       /* NMI */
-    .word Default_Handler       /* HardFault */
+    .word HardFault_Handler      /* HardFault */
     .word Default_Handler       /* MemManage */
     .word Default_Handler       /* BusFault */
     .word Default_Handler       /* UsageFault */
@@ -78,6 +78,17 @@ done_bss:
     bl main
     b .
     .size Reset_Handler, .-Reset_Handler
+
+/* Hard Fault Handler - turn on red LED (PB14) */
+    .section .text.HardFault_Handler
+    .type HardFault_Handler, %function
+HardFault_Handler:
+    /* Red LED PB14 ON: GPIOB_BSRR (0x58020418) bit 14 */
+    ldr r0, =0x58020418
+    mov r1, #(1 << 14)
+    str r1, [r0]
+    b .
+    .size HardFault_Handler, .-HardFault_Handler
 
 /* Default Handler */
     .section .text.Default_Handler

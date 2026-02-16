@@ -124,8 +124,8 @@ package body TCP_Client is
       --  Initialize LwIP stack
       LwIP_Init;
 
-      --  Add network interface
-      Netif_Add (Netif_Struct'Access, Netif_IP, Netif_Mask, Netif_GW);
+      --  Add network interface (pass raw uint32 IPs, not structs)
+      Netif_Add (Netif_Struct'Access, Netif_IP.Addr, Netif_Mask.Addr, Netif_GW.Addr);
 
       --  Set as default and bring up
       Netif_Set_Default (Netif_Struct'Access);

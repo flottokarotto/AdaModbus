@@ -10,6 +10,7 @@
 --    ./flash.sh
 
 with Interfaces; use Interfaces;
+with Interfaces.C; use Interfaces.C;
 with Ada_Modbus; use Ada_Modbus;
 with STM32H7_HAL;
 with HAL_Stubs;
@@ -82,6 +83,22 @@ begin
       end loop;
    end;
 
+   --  Print frame counters before connect
+   declare
+      function Get_TX_Count return Unsigned_32
+        with Import, Convention => C,
+             External_Name => "ethernetif_get_tx_count";
+      function Get_RX_Count return Unsigned_32
+        with Import, Convention => C,
+             External_Name => "ethernetif_get_rx_count";
+   begin
+      UART_Console.Put ("TX frames: ");
+      UART_Console.Put_Int (Integer_32 (Get_TX_Count));
+      UART_Console.Put ("  RX frames: ");
+      UART_Console.Put_Int (Integer_32 (Get_RX_Count));
+      UART_Console.Put_Line ("");
+   end;
+
    --  Initialize and connect to KSEM
    KSEM_Client.Initialize;
 
@@ -106,9 +123,23 @@ begin
 
          Retry := Retry + 1;
          if Retry >= 1 then
-            UART_Console.Put ("ERROR: KSEM connect failed after 1 attempts");
+            UART_Console.Put ("ERROR: KSEM connect failed (");
             UART_Console.Put_Int (Integer_32 (Status'Pos (Result)));
             UART_Console.Put_Line (")");
+            declare
+               function Get_TX_Count return Unsigned_32
+                 with Import, Convention => C,
+                      External_Name => "ethernetif_get_tx_count";
+               function Get_RX_Count return Unsigned_32
+                 with Import, Convention => C,
+                      External_Name => "ethernetif_get_rx_count";
+            begin
+               UART_Console.Put ("TX: ");
+               UART_Console.Put_Int (Integer_32 (Get_TX_Count));
+               UART_Console.Put ("  RX: ");
+               UART_Console.Put_Int (Integer_32 (Get_RX_Count));
+               UART_Console.Put_Line ("");
+            end;
             HAL_Stubs.Set_LED (HAL_Stubs.LED_Red, True);
             loop
                HAL_Stubs.Ethernet_Poll;
@@ -135,7 +166,6 @@ begin
 
       if HAL_Stubs.Get_Tick_Ms - Last_Read >= Read_Interval_Ms then
          Last_Read := HAL_Stubs.Get_Tick_Ms;
-
          declare
             Data   : KSEM_Client.Power_Data;
             Result : Status;

@@ -20,6 +20,25 @@
 #include "lan8742.h"
 #include <string.h>
 
+/* Debug output via Ada UART console */
+extern void uart_put_line(const char *msg);
+extern void uart_put(const char *msg);
+extern void uart_put_int(int val);
+extern void uart_put_hex(uint8_t val);
+
+static void dbg(const char *msg) { uart_put_line(msg); }
+static void dbg_val(const char *label, int val) {
+    uart_put(label);
+    uart_put_int(val);
+    uart_put_line("");
+}
+
+/* Frame counters for debugging */
+static volatile uint32_t tx_count = 0;
+static volatile uint32_t rx_count = 0;
+uint32_t ethernetif_get_tx_count(void) { return tx_count; }
+uint32_t ethernetif_get_rx_count(void) { return rx_count; }
+
 /* Private define ------------------------------------------------------------*/
 #define IFNAME0 's'
 #define IFNAME1 't'
@@ -95,7 +114,11 @@ static void low_level_init(struct netif *netif)
   EthHandle.Init.RxBuffLen = ETH_RX_BUFFER_SIZE;
 
   /* Configure ethernet peripheral (GPIOs, clocks, MAC, DMA) */
-  HAL_ETH_Init(&EthHandle);
+  dbg("[ETH] HAL_ETH_Init...");
+  {
+    HAL_StatusTypeDef rc = HAL_ETH_Init(&EthHandle);
+    dbg_val("[ETH] HAL_ETH_Init rc=", (int)rc);
+  }
 
   /* Set MAC hardware address length */
   netif->hwaddr_len = ETH_HWADDR_LEN;
@@ -119,22 +142,30 @@ static void low_level_init(struct netif *netif)
 
   /* Set Tx packet config common parameters */
   memset(&TxConfig, 0, sizeof(ETH_TxPacketConfig));
-  TxConfig.Attributes = ETH_TX_PACKETS_FEATURES_CSUM | ETH_TX_PACKETS_FEATURES_CRCPAD;
-  TxConfig.ChecksumCtrl = ETH_CHECKSUM_IPHDR_PAYLOAD_INSERT_PHDR_CALC;
+  TxConfig.Attributes = ETH_TX_PACKETS_FEATURES_CRCPAD;
+  TxConfig.ChecksumCtrl = ETH_CHECKSUM_DISABLE;
   TxConfig.CRCPadCtrl = ETH_CRC_PAD_INSERT;
 
   /* Set PHY IO functions */
   LAN8742_RegisterBusIO(&LAN8742, &LAN8742_IOCtx);
 
   /* Initialize the LAN8742 ETH PHY */
-  if (LAN8742_Init(&LAN8742) != LAN8742_STATUS_OK)
+  dbg("[ETH] LAN8742_Init...");
   {
-    netif_set_link_down(netif);
-    netif_set_down(netif);
-    return;
+    int32_t phy_rc = LAN8742_Init(&LAN8742);
+    dbg_val("[ETH] LAN8742_Init rc=", (int)phy_rc);
+    if (phy_rc != LAN8742_STATUS_OK)
+    {
+      dbg("[ETH] PHY init FAILED!");
+      netif_set_link_down(netif);
+      netif_set_down(netif);
+      return;
+    }
   }
 
+  dbg("[ETH] ethernet_link_check_state...");
   ethernet_link_check_state(netif);
+  dbg_val("[ETH] link_up=", netif_is_link_up(netif) ? 1 : 0);
 }
 
 static err_t low_level_output(struct netif *netif, struct pbuf *p)
@@ -171,7 +202,10 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
   TxConfig.TxBuffer = Txbuffer;
   TxConfig.pData = p;
 
-  HAL_ETH_Transmit(&EthHandle, &TxConfig, ETH_DMA_TRANSMIT_TIMEOUT);
+  {
+    HAL_StatusTypeDef rc = HAL_ETH_Transmit(&EthHandle, &TxConfig, ETH_DMA_TRANSMIT_TIMEOUT);
+    if (rc == HAL_OK) tx_count++;
+  }
 
   return errval;
 }
@@ -196,6 +230,7 @@ void ethernetif_input(struct netif *netif)
     p = low_level_input(netif);
     if (p != NULL)
     {
+      rx_count++;
       if (netif->input(p, netif) != ERR_OK)
       {
         pbuf_free(p);
@@ -258,6 +293,10 @@ u32_t sys_now(void)
 void HAL_ETH_MspInit(ETH_HandleTypeDef *heth)
 {
   GPIO_InitTypeDef GPIO_InitStructure = {0};
+
+  /* Enable SYSCFG clock (needed for RMII interface selection).
+   * Normally done by HAL_Init(), but we use custom startup. */
+  __HAL_RCC_SYSCFG_CLK_ENABLE();
 
   /* Enable GPIOs clocks */
   __HAL_RCC_GPIOA_CLK_ENABLE();
@@ -375,13 +414,20 @@ void ethernet_link_check_state(struct netif *netif)
 
     if (linkchanged)
     {
+      dbg_val("[ETH] PHY link state=", PHYLinkState);
+      dbg_val("[ETH] speed=", (int)speed);
+      dbg_val("[ETH] duplex=", (int)duplex);
       HAL_ETH_GetMACConfig(&EthHandle, &MACConf);
       MACConf.DuplexMode = duplex;
       MACConf.Speed = speed;
       HAL_ETH_SetMACConfig(&EthHandle, &MACConf);
-      HAL_ETH_Start(&EthHandle);
+      {
+        HAL_StatusTypeDef rc = HAL_ETH_Start(&EthHandle);
+        dbg_val("[ETH] HAL_ETH_Start rc=", (int)rc);
+      }
       netif_set_up(netif);
       netif_set_link_up(netif);
+      dbg("[ETH] Link UP, MAC started");
     }
   }
 }

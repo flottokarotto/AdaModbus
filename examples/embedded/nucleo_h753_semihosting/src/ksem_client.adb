@@ -2,6 +2,7 @@
 --  Copyright (c) 2026 Florian Fischer
 --  SPDX-License-Identifier: MIT
 
+with Ada.Unchecked_Conversion;
 with Config;
 with HAL_Stubs;
 
@@ -82,6 +83,10 @@ package body KSEM_Client is
    ----------------
 
    procedure Read_Power (Data : out Power_Data; Result : out Status) is
+      --  Reinterpret Unsigned_16 (Register_Value) as signed Integer_16
+      function To_Int16 is new Ada.Unchecked_Conversion
+        (Unsigned_16, Integer_16);
+
       --  Read 5 registers: W, WphA, WphB, WphC, W_SF
       Values : Register_Array (0 .. 4);
       Count  : Natural;
@@ -108,14 +113,14 @@ package body KSEM_Client is
          Result        => Result);
 
       if Result = Success and then Count >= 5 then
-         --  Extract scale factor (register 4 = W_SF)
-         Scale_Factor := Integer_16 (Values (4));
+         --  Extract scale factor (register 4 = W_SF, signed INT16)
+         Scale_Factor := To_Int16 (Unsigned_16 (Values (4)));
 
          --  Extract raw values (signed INT16)
-         Raw_Total := Integer_16 (Values (0));
-         Raw_L1    := Integer_16 (Values (1));
-         Raw_L2    := Integer_16 (Values (2));
-         Raw_L3    := Integer_16 (Values (3));
+         Raw_Total := To_Int16 (Unsigned_16 (Values (0)));
+         Raw_L1    := To_Int16 (Unsigned_16 (Values (1)));
+         Raw_L2    := To_Int16 (Unsigned_16 (Values (2)));
+         Raw_L3    := To_Int16 (Unsigned_16 (Values (3)));
 
          --  Apply scale factor (typically 0 or -1)
          --  SF=0: value in Watts

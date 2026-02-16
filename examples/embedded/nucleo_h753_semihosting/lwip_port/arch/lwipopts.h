@@ -109,17 +109,16 @@
 #define LWIP_SINGLE_NETIF               1       /* Only one interface */
 
 /*---------------------------------------------------------------------------*/
-/* Checksum */
+/* Checksum - all software for now (debug)                                   */
 /*---------------------------------------------------------------------------*/
-/* Use hardware checksums where available */
-#define CHECKSUM_GEN_IP                 0
-#define CHECKSUM_GEN_UDP                0
-#define CHECKSUM_GEN_TCP                0
-#define CHECKSUM_GEN_ICMP               1       /* ICMP checksum must be in software */
-#define CHECKSUM_CHECK_IP               0
-#define CHECKSUM_CHECK_UDP              0
-#define CHECKSUM_CHECK_TCP              0
-#define CHECKSUM_CHECK_ICMP             0
+#define CHECKSUM_GEN_IP                 1
+#define CHECKSUM_GEN_UDP                1
+#define CHECKSUM_GEN_TCP                1
+#define CHECKSUM_GEN_ICMP               1
+#define CHECKSUM_CHECK_IP               1
+#define CHECKSUM_CHECK_UDP              1
+#define CHECKSUM_CHECK_TCP              1
+#define CHECKSUM_CHECK_ICMP             1
 
 /*---------------------------------------------------------------------------*/
 /* Statistics */
