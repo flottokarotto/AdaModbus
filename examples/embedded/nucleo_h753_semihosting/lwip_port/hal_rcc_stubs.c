@@ -13,12 +13,4 @@ uint32_t HAL_RCC_GetHCLKFreq(void)
     return HSI_VALUE;  /* 64 MHz */
 }
 
-/**
- * SYSCFG ETH interface select - called by newer HAL ETH drivers.
- * RMII mode is selected via SYSCFG_PMCR in HAL_ETH_MspInit.
- * This stub satisfies the linker; actual config is done in MspInit.
- */
-void HAL_SYSCFG_ETHInterfaceSelect(uint32_t ETH_Interface)
-{
-    (void)ETH_Interface;
-}
+/* HAL_SYSCFG_ETHInterfaceSelect is already provided by stm32h7xx_hal.c */
