@@ -21,8 +21,10 @@ with UART_Console;
 
 procedure Main is
 
-   Last_Read : Unsigned_32 := 0;
+   Last_Read     : Unsigned_32 := 0;
+   Blue_Off_Time : Unsigned_32 := 0;
    Read_Interval_Ms : constant := 2000;
+   Blue_Pulse_Ms    : constant := 100;
 
 begin
    --  Hardware init (clock, SysTick, GPIO, LEDs)
@@ -158,11 +160,18 @@ begin
    end;
 
    UART_Console.Put_Line ("KSEM connected!");
-   HAL_Stubs.Set_LED (HAL_Stubs.LED_Blue, True);
 
    --  Main loop: read power every 2 seconds
    loop
       HAL_Stubs.Ethernet_Poll;
+
+      --  Turn off blue activity LED after pulse
+      if Blue_Off_Time > 0
+        and then HAL_Stubs.Get_Tick_Ms >= Blue_Off_Time
+      then
+         HAL_Stubs.Set_LED (HAL_Stubs.LED_Yellow, False);
+         Blue_Off_Time := 0;
+      end if;
 
       if HAL_Stubs.Get_Tick_Ms - Last_Read >= Read_Interval_Ms then
          Last_Read := HAL_Stubs.Get_Tick_Ms;
@@ -173,6 +182,9 @@ begin
             KSEM_Client.Read_Power (Data, Result);
 
             if Result = Success and then Data.Valid then
+               HAL_Stubs.Set_LED (HAL_Stubs.LED_Red, False);
+               HAL_Stubs.Set_LED (HAL_Stubs.LED_Yellow, True);
+               Blue_Off_Time := HAL_Stubs.Get_Tick_Ms + Blue_Pulse_Ms;
                UART_Console.Put ("Grid: ");
                UART_Console.Put_Int (Data.Total_Power_W);
                UART_Console.Put ("W  L1:");
@@ -183,8 +195,8 @@ begin
                UART_Console.Put_Int (Data.Phase_L3_W);
                UART_Console.Put_Line ("W");
             else
+               HAL_Stubs.Set_LED (HAL_Stubs.LED_Red, True);
                UART_Console.Put_Line ("KSEM read failed");
-               HAL_Stubs.Toggle_LED (HAL_Stubs.LED_Red);
             end if;
          end;
       end if;

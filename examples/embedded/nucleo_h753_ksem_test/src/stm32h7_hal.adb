@@ -97,12 +97,13 @@ package body STM32H7_HAL is
    procedure GPIO_Init is
       AHB4 : AHB4ENR_Register;
    begin
-      --  Enable GPIO clocks (GPIOA, GPIOB, GPIOC, GPIOD, GPIOG)
+      --  Enable GPIO clocks (GPIOA, GPIOB, GPIOC, GPIOD, GPIOE, GPIOG)
       AHB4 := RCC_Periph.AHB4ENR;
       AHB4.GPIOAEN := True;
       AHB4.GPIOBEN := True;
       AHB4.GPIOCEN := True;
       AHB4.GPIODEN := True;
+      AHB4.GPIOEEN := True;
       AHB4.GPIOGEN := True;
       RCC_Periph.AHB4ENR := AHB4;
 
@@ -115,10 +116,17 @@ package body STM32H7_HAL is
       end;
 
       --  Configure LED pins as outputs
-      --  PB0 (LD1), PB7 (LD2), PB14 (LD3)
+      --  PB0 (LD1 green), PE1 (LD2 yellow, MB1364E), PB14 (LD3 red)
       GPIO_Set_Mode (Port_B, 0, Mode_Output);
-      GPIO_Set_Mode (Port_B, 7, Mode_Output);
       GPIO_Set_Mode (Port_B, 14, Mode_Output);
+
+      --  PE1 (LD2 blue) - configured directly via GPIOE MODER
+      declare
+         Reg : MODER_Register := GPIOE_Periph.MODER;
+      begin
+         Reg.Arr (1) := GPIO_Mode_Val_Output;
+         GPIOE_Periph.MODER := Reg;
+      end;
 
       --  Configure PC13 (Button B1) as input
       GPIO_Set_Mode (Port_C, 13, Mode_Input);

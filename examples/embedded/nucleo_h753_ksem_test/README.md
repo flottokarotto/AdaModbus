@@ -38,6 +38,16 @@ arm-eabi-objcopy -O binary bin/main.elf bin/main.bin
 st-flash write bin/main.bin 0x08000000
 ```
 
+## LED Status (MB1364 Rev E)
+
+| LED | Pin | Meaning |
+|-----|-----|---------|
+| Green (LD1) | PB0 | Heartbeat, blinks every 500 ms |
+| Yellow (LD2) | PE1 | Activity, short pulse on successful KSEM read |
+| Red (LD3) | PB14 | Error (on = last read failed) |
+
+Red + no heartbeat: fatal error (no Ethernet link or KSEM connect failed).
+
 ## Serial Output
 
 Connect to ST-Link VCP at **115200 8N1** (e.g. PuTTY, minicom, or `screen /dev/ttyACMx 115200`).

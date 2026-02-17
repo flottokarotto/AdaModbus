@@ -13,14 +13,37 @@ pragma Unreferenced (Time_Exports);
 with Ada_Modbus.Protocol;
 with Ada_Modbus.Protocol.TCP;
 with Config;
+with STM32H753;      use STM32H753;
+with STM32H753.GPIO; use STM32H753.GPIO;
 
 package body HAL_Stubs is
 
-   --  LED pin mapping
-   LED_Pins : constant array (LED_Color) of STM32H7_HAL.GPIO_Pin :=
-     [LED_Green => 0,    -- PB0
-      LED_Blue  => 7,    -- PB7
-      LED_Red   => 14];  -- PB14
+   --  LED pin mapping (PB-based LEDs only, yellow is on PE1)
+   type PB_LED is (PB_Green, PB_Red);
+   LED_Pins : constant array (PB_LED) of STM32H7_HAL.GPIO_Pin :=
+     [PB_Green => 0,    -- PB0
+      PB_Red   => 14];  -- PB14
+
+   --  PE1 (LD2 yellow) direct access via GPIOE BSRR
+   PE1_Set   : constant BSRR_Register :=
+     (BS => (As_Array => False, Val => 2**1), BR => (As_Array => False, Val => 0));
+   PE1_Reset : constant BSRR_Register :=
+     (BS => (As_Array => False, Val => 0), BR => (As_Array => False, Val => 2**1));
+
+   procedure Write_PE1 (On : Boolean) is
+   begin
+      if On then
+         GPIOE_Periph.BSRR := PE1_Set;
+      else
+         GPIOE_Periph.BSRR := PE1_Reset;
+      end if;
+   end Write_PE1;
+
+   procedure Toggle_PE1 is
+      Current : constant Boolean := GPIOE_Periph.ODR.OD.Arr (1);
+   begin
+      Write_PE1 (not Current);
+   end Toggle_PE1;
 
    --  Network initialized flag
    Network_Initialized : Boolean := False;
@@ -367,7 +390,11 @@ package body HAL_Stubs is
 
    procedure Set_LED (LED : LED_Color; On : Boolean) is
    begin
-      STM32H7_HAL.GPIO_Write (STM32H7_HAL.Port_B, LED_Pins (LED), On);
+      case LED is
+         when LED_Yellow  => Write_PE1 (On);
+         when LED_Green => STM32H7_HAL.GPIO_Write (STM32H7_HAL.Port_B, LED_Pins (PB_Green), On);
+         when LED_Red   => STM32H7_HAL.GPIO_Write (STM32H7_HAL.Port_B, LED_Pins (PB_Red), On);
+      end case;
    end Set_LED;
 
    --------------------
@@ -386,7 +413,11 @@ package body HAL_Stubs is
 
    procedure Toggle_LED (LED : LED_Color) is
    begin
-      STM32H7_HAL.GPIO_Toggle (STM32H7_HAL.Port_B, LED_Pins (LED));
+      case LED is
+         when LED_Yellow  => Toggle_PE1;
+         when LED_Green => STM32H7_HAL.GPIO_Toggle (STM32H7_HAL.Port_B, LED_Pins (PB_Green));
+         when LED_Red   => STM32H7_HAL.GPIO_Toggle (STM32H7_HAL.Port_B, LED_Pins (PB_Red));
+      end case;
    end Toggle_LED;
 
 end HAL_Stubs;

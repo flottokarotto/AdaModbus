@@ -118,7 +118,7 @@ package HAL_Stubs is
    procedure GPIO_Initialize;
 
    --  Set LED state
-   type LED_Color is (LED_Green, LED_Blue, LED_Red);
+   type LED_Color is (LED_Green, LED_Yellow, LED_Red);
    procedure Set_LED (LED : LED_Color; On : Boolean);
 
    --  Read button state (returns True when pressed)
