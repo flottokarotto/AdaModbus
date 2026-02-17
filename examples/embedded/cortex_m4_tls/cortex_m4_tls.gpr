@@ -17,7 +17,7 @@ project Cortex_M4_TLS is
    type Build_Mode is ("stub", "test", "loopback", "full");
    type Build_Mode_Type is ("debug", "release");
 
-   Mode       : Build_Mode      := external ("MBEDTLS_MODE", "stub");
+   Mode       : Build_Mode      := external ("MBEDTLS_MODE", "test");
    Build_Opt  : Build_Mode_Type := external ("BUILD_MODE", "release");
 
    --  Core source directories
