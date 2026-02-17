@@ -20,7 +20,7 @@ git submodule update --init examples/embedded/nucleo_h753_ksem_test/STM32CubeH7
 # Initialize only the needed nested submodules within STM32CubeH7
 # (the full repo has ~50 BSP components we don't need)
 cd "$SCRIPT_DIR/STM32CubeH7"
-git submodule update --init \
+git submodule update --init --recursive \
     Drivers/STM32H7xx_HAL_Driver \
     Drivers/CMSIS/Device/ST/STM32H7xx \
     Drivers/BSP/Components/lan8742
