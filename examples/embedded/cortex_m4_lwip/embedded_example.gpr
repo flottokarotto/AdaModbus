@@ -19,13 +19,17 @@ project Embedded_Example is
 
    type LwIP_Mode is ("disabled", "enabled");
    type Target_Type is ("lm3s6965evb", "stm32f4");
+   type Build_Mode_Type is ("debug", "release");
 
-   LwIP   : LwIP_Mode   := external ("LWIP", "disabled");
-   Target : Target_Type := external ("TARGET", "lm3s6965evb");
+   LwIP       : LwIP_Mode       := external ("LWIP", "disabled");
+   Target     : Target_Type     := external ("TARGET", "lm3s6965evb");
+   Build_Mode : Build_Mode_Type := external ("BUILD_MODE", "release");
 
    case LwIP is
       when "disabled" =>
-         for Source_Dirs use (".", "../../../src/core", "../../../src/transport");
+         for Source_Dirs use
+           (".", "../shared",
+            "../../../src/core", "../../../src/transport");
          for Main use ("main_loopback.adb");
          for Excluded_Source_Files use
            ("main_slave.adb", "main_master.adb",
@@ -36,7 +40,8 @@ project Embedded_Example is
 
       when "enabled" =>
          for Source_Dirs use
-           (".", "../../../src/core", "../../../src/transport",
+           (".", "../shared",
+            "../../../src/core", "../../../src/transport",
             "lwip/src/core",
             "lwip/src/core/ipv4",
             "lwip/src/api",
@@ -66,14 +71,20 @@ project Embedded_Example is
    end case;
 
    package Compiler is
-      Ada_Switches :=
-        ("-gnat2022",
-         "-gnatwa",
-         "-gnatw.X",
-         "-g",
-         "-O2",
+      Common_Switches :=
+        ("-g",
          "-ffunction-sections",
          "-fdata-sections");
+
+      case Build_Mode is
+         when "debug"   => Common_Switches := Common_Switches & ("-Og");
+         when "release" => Common_Switches := Common_Switches & ("-O2");
+      end case;
+
+      Ada_Switches := Common_Switches &
+        ("-gnat2022",
+         "-gnatwa",
+         "-gnatw.X");
 
       for Default_Switches ("Ada") use Ada_Switches;
 

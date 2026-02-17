@@ -17,11 +17,13 @@ project STM32_RTU is
 
    type Main_Type is ("slave", "master");
    type Target_Type is ("lm3s6965evb", "stm32f4");
+   type Build_Mode_Type is ("debug", "release");
 
-   Main_Select : Main_Type   := external ("MAIN", "slave");
-   Target      : Target_Type := external ("TARGET", "lm3s6965evb");
+   Main_Select : Main_Type       := external ("MAIN", "slave");
+   Target      : Target_Type     := external ("TARGET", "lm3s6965evb");
+   Build_Mode  : Build_Mode_Type := external ("BUILD_MODE", "release");
 
-   for Source_Dirs use (".", "../../../src/core");
+   for Source_Dirs use (".", "../shared", "../../../src/core");
    for Object_Dir use "obj/" & Main_Select & "/" & Target;
    for Exec_Dir use "bin";
 
@@ -47,14 +49,20 @@ project STM32_RTU is
    end case;
 
    package Compiler is
-      for Default_Switches ("Ada") use
-        ("-gnat2022",
-         "-gnatwa",
-         "-gnatw.X",
-         "-g",
-         "-O2",
+      Common_Switches :=
+        ("-g",
          "-ffunction-sections",
          "-fdata-sections");
+
+      case Build_Mode is
+         when "debug"   => Common_Switches := Common_Switches & ("-Og");
+         when "release" => Common_Switches := Common_Switches & ("-O2");
+      end case;
+
+      for Default_Switches ("Ada") use Common_Switches &
+        ("-gnat2022",
+         "-gnatwa",
+         "-gnatw.X");
    end Compiler;
 
    package Linker is
