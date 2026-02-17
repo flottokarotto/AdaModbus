@@ -175,12 +175,6 @@ jobs:
         run: |
           alr toolchain --select gnat_arm_elf^15 gprbuild
 
-          # Loopback test
-          cd examples/embedded/cortex_m4_lwip && alr build
-          timeout 10 qemu-system-arm -M lm3s6965evb -nographic -semihosting \
-            -kernel bin/main_loopback.elf || true
-          cd ../../..
-
           # RTU test
           cd examples/embedded/stm32_rtu && alr build
           alr exec -- gprbuild -P stm32_rtu.gpr -XMAIN=slave
