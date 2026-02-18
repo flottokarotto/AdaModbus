@@ -85,7 +85,7 @@ LWIP_MEMPOOL_DECLARE(RX_POOL, ETH_RX_BUFFER_CNT, sizeof(RxBuff_t), "Zero-copy RX
 __attribute__((section(".Rx_PoolSection"))) extern u8_t memp_memory_RX_POOL_base[];
 
 /* Variable Definitions */
-static RxAllocStatusTypeDef RxAllocStatus;
+static volatile RxAllocStatusTypeDef RxAllocStatus;
 
 /* Global Ethernet handle */
 ETH_HandleTypeDef EthHandle;
