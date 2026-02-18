@@ -8,6 +8,10 @@
  *         nano libc doesn't provide in our link configuration.
  *
  * Provides:
+ *   - sys_arch_protect/unprotect -- PRIMASK-based critical sections
+ *     (SYS_LIGHTWEIGHT_PROT=1) to guard LwIP memory pools.
+ *     In the current polling-based ethernetif.c these serve primarily
+ *     as defensive hardening for any future IRQ-driven ETH.
  *   - rand()/srand() -- needed by LwIP for TCP ISN generation
  *   - strlen()       -- needed by LwIP internally
  *   - printf()/puts() -- stubs (LwIP LWIP_PLATFORM_DIAG references these)
@@ -18,6 +22,30 @@
 
 #include <stdarg.h>
 #include <stddef.h>
+#include "lwip/opt.h"
+#include "arch/cc.h"
+
+/*---------------------------------------------------------------------------*/
+/* Critical Sections (SYS_LIGHTWEIGHT_PROT=1)                               */
+/*---------------------------------------------------------------------------*/
+
+/* Save PRIMASK and disable all interrupts.
+ * Returns previous PRIMASK so the caller can restore it exactly,
+ * rather than unconditionally re-enabling IRQs on unprotect. */
+sys_prot_t sys_arch_protect(void)
+{
+    uint32_t primask;
+    __asm volatile ("mrs %0, primask" : "=r" (primask) :: "memory");
+    __asm volatile ("cpsid i" ::: "memory");  /* disable IRQ */
+    return primask;
+}
+
+/* Restore PRIMASK to the value saved by sys_arch_protect.
+ * Only re-enables IRQs if they were enabled before the protect call. */
+void sys_arch_unprotect(sys_prot_t pval)
+{
+    __asm volatile ("msr primask, %0" :: "r" (pval) : "memory");
+}
 
 /*---------------------------------------------------------------------------*/
 /* C Library Stubs for Bare Metal */

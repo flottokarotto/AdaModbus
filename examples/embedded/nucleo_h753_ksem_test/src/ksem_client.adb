@@ -75,6 +75,11 @@ package body KSEM_Client is
 
    function Is_Connected return Boolean is
    begin
+      --  Sync with underlying TCP state so callers (e.g. reconnect logic
+      --  in main loop) always see the actual connection status.
+      if Connected and then not HAL_Stubs.TCP_Is_Connected then
+         Connected := False;
+      end if;
       return Connected;
    end Is_Connected;
 
@@ -96,7 +101,7 @@ package body KSEM_Client is
    begin
       Data := (0, 0, 0, 0, False);
 
-      if not Connected then
+      if not Is_Connected then
          Result := Invalid_Request;
          return;
       end if;

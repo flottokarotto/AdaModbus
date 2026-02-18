@@ -28,7 +28,7 @@
 #define LWIP_NETCONN                    0       /* No netconn API */
 #define LWIP_NETIF_API                  0
 
-#define SYS_LIGHTWEIGHT_PROT            0       /* No protection needed (no OS) */
+#define SYS_LIGHTWEIGHT_PROT            1       /* Defensive: guard memory pools for possible future IRQ-based ETH */
 #define LWIP_PROVIDE_ERRNO              1
 
 /*---------------------------------------------------------------------------*/
@@ -70,7 +70,10 @@
 #define TCP_MAXRTX                      8       /* Reduced retries */
 #define TCP_SYNMAXRTX                   3       /* Reduced SYN retries */
 
-#define LWIP_TCP_KEEPALIVE              0       /* Disable keepalive */
+#define LWIP_TCP_KEEPALIVE              1       /* Detect dead connections */
+#define TCP_KEEPIDLE_DEFAULT            10000   /* 10s before first probe */
+#define TCP_KEEPINTVL_DEFAULT           5000    /* 5s between probes */
+#define TCP_KEEPCNT_DEFAULT             3       /* 3 probes before drop */
 #define LWIP_TCP_TIMESTAMPS             0
 
 /*---------------------------------------------------------------------------*/

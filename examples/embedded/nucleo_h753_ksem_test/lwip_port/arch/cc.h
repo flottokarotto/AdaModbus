@@ -52,4 +52,9 @@ typedef uintptr_t   mem_ptr_t;
 /* Random number generator */
 #define LWIP_RAND()             ((u32_t)rand())
 
+/* Critical section type for SYS_LIGHTWEIGHT_PROT.
+ * Stores the PRIMASK register value so interrupts can be
+ * restored to their previous state (not unconditionally re-enabled). */
+typedef uint32_t sys_prot_t;
+
 #endif /* CC_H */
