@@ -24,7 +24,7 @@ project STM32_RTU is
    Build_Mode  : Build_Mode_Type := external ("BUILD_MODE", "release");
 
    for Source_Dirs use (".", "../shared", "../../../src/core");
-   for Object_Dir use "obj/" & Main_Select & "/" & Target;
+   for Object_Dir use "obj/" & Main_Select & "/" & Target & "/" & Build_Mode;
    for Exec_Dir use "bin";
 
    case Main_Select is
