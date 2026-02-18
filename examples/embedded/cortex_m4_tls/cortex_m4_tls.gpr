@@ -15,10 +15,13 @@
 project Cortex_M4_TLS is
 
    type Build_Mode is ("stub", "test", "loopback", "full");
-   Mode : Build_Mode := external ("MBEDTLS_MODE", "stub");
+   type Build_Mode_Type is ("debug", "release");
+
+   Mode       : Build_Mode      := external ("MBEDTLS_MODE", "test");
+   Build_Opt  : Build_Mode_Type := external ("BUILD_MODE", "release");
 
    --  Core source directories
-   Core_Src := ("src",
+   Core_Src := ("src", "../shared",
                 "../../../src/core",
                 "../../../src/transport",
                 "../../../tls_mbed/src",
@@ -114,25 +117,30 @@ project Cortex_M4_TLS is
          );
    end case;
 
-   for Object_Dir use "obj";
+   for Object_Dir use "obj/" & Mode & "/" & Build_Opt;
    for Exec_Dir use "bin";
 
    for Target use "arm-eabi";
    for Runtime ("Ada") use "light-lm3s";
 
    package Compiler is
-      Ada_Switches :=
-        ("-gnat2022",
-         "-gnatwa",
-         "-gnatw.X",
-         "-g",
-         "-Os",
+      Common_Switches :=
+        ("-g",
          "-ffunction-sections",
          "-fdata-sections");
 
-      C_Switches_Base :=
-        ("-Os", "-Wall", "-Wno-unused-function",
-         "-ffunction-sections", "-fdata-sections",
+      case Build_Opt is
+         when "debug"   => Common_Switches := Common_Switches & ("-Og");
+         when "release" => Common_Switches := Common_Switches & ("-Os");
+      end case;
+
+      Ada_Switches := Common_Switches &
+        ("-gnat2022",
+         "-gnatwa",
+         "-gnatw.X");
+
+      C_Switches_Base := Common_Switches &
+        ("-Wall", "-Wno-unused-function",
          "-mcpu=cortex-m3", "-mthumb");
 
       for Default_Switches ("Ada") use Ada_Switches;
