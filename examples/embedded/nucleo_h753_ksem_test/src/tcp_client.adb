@@ -24,6 +24,9 @@ package body TCP_Client is
    RX_Len    : Natural := 0;
    RX_Ready  : Boolean := False;
 
+   --  Forward declaration
+   procedure Cleanup_PCB;
+
    ----------------------
    --  Callback Stubs  --
    ----------------------
@@ -68,9 +71,20 @@ package body TCP_Client is
       Len      : Unsigned_16;
       Copied   : Unsigned_16;
       Dummy    : Unsigned_8;
+      Close_Err : Err_T;
    begin
       if P = null then
-         --  Connection closed by remote
+         --  Remote closed connection.
+         --  Must call tcp_close to complete the TCP close handshake
+         --  and release the PCB back to lwIP's pool.
+         TCP_Recv (PCB, System.Null_Address);
+         TCP_Err (PCB, System.Null_Address);
+         TCP_Poll (PCB, System.Null_Address, 0);
+         Close_Err := TCP_Close (PCB);
+         if Close_Err /= ERR_OK then
+            TCP_Abort (PCB);
+         end if;
+         Current_PCB := null;
          Current_State := Disconnected;
          return ERR_OK;
       end if;
@@ -87,7 +101,7 @@ package body TCP_Client is
       RX_Ready := True;
 
       --  Acknowledge received data
-      TCP_Recved (PCB, Len);
+      TCP_Recved (PCB, Pbuf_Get_Tot_Len (P));
 
       --  Free pbuf
       Dummy := Pbuf_Free (P);
@@ -95,16 +109,58 @@ package body TCP_Client is
       return ERR_OK;
    end Recv_Callback;
 
-   --  Called on error
+   --  Called on error (PCB is already freed by lwIP when this fires)
    procedure Err_Callback (Arg : System.Address; Err : Err_T)
      with Convention => C;
 
    procedure Err_Callback (Arg : System.Address; Err : Err_T) is
       pragma Unreferenced (Arg, Err);
    begin
-      Current_State := Error;
+      --  lwIP has already freed the PCB before calling err_callback
       Current_PCB := null;
+      Current_State := Error;
    end Err_Callback;
+
+   --  Called periodically by lwIP for connection maintenance
+   function Poll_Callback
+     (Arg : System.Address;
+      PCB : TCP_PCB_Ptr) return Err_T
+     with Convention => C;
+
+   function Poll_Callback
+     (Arg : System.Address;
+      PCB : TCP_PCB_Ptr) return Err_T
+   is
+      pragma Unreferenced (Arg, PCB);
+   begin
+      --  lwIP calls this every N half-seconds (interval set in tcp_poll).
+      --  Returning ERR_OK keeps the connection alive.
+      --  If we were in an unexpected state, we could abort here.
+      return ERR_OK;
+   end Poll_Callback;
+
+   -----------------
+   -- Cleanup_PCB --
+   -----------------
+
+   procedure Cleanup_PCB is
+      Err : Err_T;
+   begin
+      if Current_PCB /= null then
+         --  Clear callbacks before closing to prevent stale invocations
+         TCP_Recv (Current_PCB, System.Null_Address);
+         TCP_Err (Current_PCB, System.Null_Address);
+         TCP_Poll (Current_PCB, System.Null_Address, 0);
+
+         Err := TCP_Close (Current_PCB);
+         if Err /= ERR_OK then
+            --  tcp_close can fail if send buffer is not empty;
+            --  tcp_abort always succeeds and frees the PCB immediately
+            TCP_Abort (Current_PCB);
+         end if;
+         Current_PCB := null;
+      end if;
+   end Cleanup_PCB;
 
    ----------------
    -- Initialize --
@@ -143,7 +199,7 @@ package body TCP_Client is
       --  Process received Ethernet frames
       Ethernetif_Input (Netif_Struct'Access);
 
-      --  Process LwIP timeouts
+      --  Process LwIP timeouts (including TCP keepalive probes)
       Sys_Check_Timeouts;
    end Poll;
 
@@ -161,14 +217,13 @@ package body TCP_Client is
       Err : Err_T;
       Start_Time : constant Unsigned_32 := STM32H7_HAL.Get_Tick;
    begin
-      --  Disconnect if already connected
-      if Current_PCB /= null then
-         Disconnect;
-      end if;
+      --  Clean up any previous connection
+      Cleanup_PCB;
 
       --  Create new TCP PCB
       Current_PCB := TCP_New;
       if Current_PCB = null then
+         Current_State := Disconnected;
          Result := Buffer_Too_Small;
          return;
       end if;
@@ -177,11 +232,14 @@ package body TCP_Client is
       TCP_Arg (Current_PCB, System.Null_Address);
       TCP_Recv (Current_PCB, Recv_Callback'Address);
       TCP_Err (Current_PCB, Err_Callback'Address);
+      --  Poll callback: interval 4 = every 2 seconds (unit is 500ms)
+      TCP_Poll (Current_PCB, Poll_Callback'Address, 4);
 
       --  Start connection
       Current_State := Connecting;
 
-      Err := TCP_Connect (Current_PCB, IP'Access, Remote_Port, Connect_Callback'Address);
+      Err := TCP_Connect (Current_PCB, IP'Access, Remote_Port,
+                          Connect_Callback'Address);
       if Err /= ERR_OK then
          TCP_Abort (Current_PCB);
          Current_PCB := null;
@@ -195,8 +253,7 @@ package body TCP_Client is
          Poll;
 
          if STM32H7_HAL.Get_Tick - Start_Time > Timeout_Ms then
-            TCP_Abort (Current_PCB);
-            Current_PCB := null;
+            Cleanup_PCB;
             Current_State := Disconnected;
             Result := Timeout;
             return;
@@ -206,6 +263,8 @@ package body TCP_Client is
       if Current_State = Connected then
          Result := Success;
       else
+         Cleanup_PCB;
+         Current_State := Disconnected;
          Result := Timeout;
       end if;
    end Connect;
@@ -215,15 +274,8 @@ package body TCP_Client is
    ----------------
 
    procedure Disconnect is
-      Err : Err_T;
    begin
-      if Current_PCB /= null then
-         Err := TCP_Close (Current_PCB);
-         if Err /= ERR_OK then
-            TCP_Abort (Current_PCB);
-         end if;
-         Current_PCB := null;
-      end if;
+      Cleanup_PCB;
       Current_State := Disconnected;
       RX_Ready := False;
       RX_Len := 0;
@@ -257,7 +309,7 @@ package body TCP_Client is
    is
       Err : Err_T;
    begin
-      if Current_State /= Connected then
+      if Current_State /= Connected or else Current_PCB = null then
          Result := Invalid_Request;
          return;
       end if;
@@ -295,7 +347,7 @@ package body TCP_Client is
       Data := [others => 0];
       Length := 0;
 
-      if Current_State /= Connected then
+      if Current_State /= Connected or else Current_PCB = null then
          Result := Invalid_Request;
          return;
       end if;

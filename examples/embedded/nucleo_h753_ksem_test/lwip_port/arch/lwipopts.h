@@ -70,7 +70,10 @@
 #define TCP_MAXRTX                      8       /* Reduced retries */
 #define TCP_SYNMAXRTX                   3       /* Reduced SYN retries */
 
-#define LWIP_TCP_KEEPALIVE              0       /* Disable keepalive */
+#define LWIP_TCP_KEEPALIVE              1       /* Detect dead connections */
+#define TCP_KEEPIDLE_DEFAULT            10000   /* 10s before first probe */
+#define TCP_KEEPINTVL_DEFAULT           5000    /* 5s between probes */
+#define TCP_KEEPCNT_DEFAULT             3       /* 3 probes before drop */
 #define LWIP_TCP_TIMESTAMPS             0
 
 /*---------------------------------------------------------------------------*/
