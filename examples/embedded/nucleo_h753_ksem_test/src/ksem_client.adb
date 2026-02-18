@@ -96,8 +96,15 @@ package body KSEM_Client is
    begin
       Data := (0, 0, 0, 0, False);
 
+      --  Sync Connected flag with underlying TCP state.
+      --  If TCP dropped (e.g. remote RST after a reset), reflect that here
+      --  so callers can detect the disconnect and trigger a reconnect.
+      if Connected and then not HAL_Stubs.TCP_Is_Connected then
+         Connected := False;
+      end if;
+
       if not Connected then
-         Result := Invalid_Request;
+         Result := Timeout;
          return;
       end if;
 

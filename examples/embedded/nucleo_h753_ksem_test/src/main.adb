@@ -21,10 +21,12 @@ with UART_Console;
 
 procedure Main is
 
-   Last_Read     : Unsigned_32 := 0;
-   Blue_Off_Time : Unsigned_32 := 0;
-   Read_Interval_Ms : constant := 2000;
-   Blue_Pulse_Ms    : constant := 100;
+   Last_Read        : Unsigned_32 := 0;
+   Blue_Off_Time    : Unsigned_32 := 0;
+   Last_Reconnect   : Unsigned_32 := 0;
+   Read_Interval_Ms    : constant := 2000;
+   Blue_Pulse_Ms       : constant := 100;
+   Reconnect_Delay_Ms  : constant := 5000;
 
 begin
    --  Hardware init (clock, SysTick, GPIO, LEDs)
@@ -124,8 +126,8 @@ begin
          exit when Result = Success;
 
          Retry := Retry + 1;
-         if Retry >= 1 then
-            UART_Console.Put ("ERROR: KSEM connect failed (");
+         if Retry >= 5 then
+            UART_Console.Put ("ERROR: KSEM connect failed after 5 attempts (");
             UART_Console.Put_Int (Integer_32 (Status'Pos (Result)));
             UART_Console.Put_Line (")");
             declare
@@ -171,6 +173,27 @@ begin
       then
          HAL_Stubs.Set_LED (HAL_Stubs.LED_Yellow, False);
          Blue_Off_Time := 0;
+      end if;
+
+      --  Reconnect if TCP connection was lost
+      if not KSEM_Client.Is_Connected
+        and then HAL_Stubs.Get_Tick_Ms - Last_Reconnect >= Reconnect_Delay_Ms
+      then
+         Last_Reconnect := HAL_Stubs.Get_Tick_Ms;
+         UART_Console.Put_Line ("KSEM reconnecting...");
+         declare
+            RC : Status;
+         begin
+            KSEM_Client.Connect (RC);
+            if RC = Success then
+               UART_Console.Put_Line ("KSEM reconnected");
+               HAL_Stubs.Set_LED (HAL_Stubs.LED_Red, False);
+            else
+               UART_Console.Put ("KSEM reconnect failed (");
+               UART_Console.Put_Int (Integer_32 (Status'Pos (RC)));
+               UART_Console.Put_Line (")");
+            end if;
+         end;
       end if;
 
       if HAL_Stubs.Get_Tick_Ms - Last_Read >= Read_Interval_Ms then
