@@ -91,8 +91,16 @@ package body TCP_Client is
 
       --  Get data length
       Len := Pbuf_Get_Tot_Len (P);
+
       if Len > Unsigned_16 (Max_RX_Size) then
-         Len := Unsigned_16 (Max_RX_Size);
+         --  Frame too large for our buffer — protocol error.
+         --  Abort rather than silently truncating and desynchronizing
+         --  the Modbus/TCP stream.
+         Dummy := Pbuf_Free (P);
+         TCP_Abort (PCB);
+         Current_PCB := null;
+         Current_State := Error;
+         return ERR_ABRT;
       end if;
 
       --  Copy data to buffer
@@ -101,7 +109,7 @@ package body TCP_Client is
       RX_Ready := True;
 
       --  Acknowledge received data
-      TCP_Recved (PCB, Pbuf_Get_Tot_Len (P));
+      TCP_Recved (PCB, Len);
 
       --  Free pbuf
       Dummy := Pbuf_Free (P);
@@ -223,8 +231,9 @@ package body TCP_Client is
       --  Create new TCP PCB
       Current_PCB := TCP_New;
       if Current_PCB = null then
+         --  PCB pool exhausted (MEMP_NUM_TCP_PCB limit reached)
          Current_State := Disconnected;
-         Result := Buffer_Too_Small;
+         Result := Invalid_Request;
          return;
       end if;
 

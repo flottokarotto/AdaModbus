@@ -9,8 +9,9 @@
  *
  * Provides:
  *   - sys_arch_protect/unprotect -- PRIMASK-based critical sections
- *     (SYS_LIGHTWEIGHT_PROT=1) to guard LwIP memory pools against
- *     concurrent access from ISR (HAL ETH callbacks) and mainloop.
+ *     (SYS_LIGHTWEIGHT_PROT=1) to guard LwIP memory pools.
+ *     In the current polling-based ethernetif.c these serve primarily
+ *     as defensive hardening for any future IRQ-driven ETH.
  *   - rand()/srand() -- needed by LwIP for TCP ISN generation
  *   - strlen()       -- needed by LwIP internally
  *   - printf()/puts() -- stubs (LwIP LWIP_PLATFORM_DIAG references these)

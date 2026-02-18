@@ -28,7 +28,7 @@
 #define LWIP_NETCONN                    0       /* No netconn API */
 #define LWIP_NETIF_API                  0
 
-#define SYS_LIGHTWEIGHT_PROT            1       /* Guard ISR vs. mainloop (HAL ETH callbacks run in IRQ context) */
+#define SYS_LIGHTWEIGHT_PROT            1       /* Defensive: guard memory pools for possible future IRQ-based ETH */
 #define LWIP_PROVIDE_ERRNO              1
 
 /*---------------------------------------------------------------------------*/
