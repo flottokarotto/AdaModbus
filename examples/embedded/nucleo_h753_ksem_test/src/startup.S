@@ -96,9 +96,8 @@ LoopFillZerobss:
 .size  Reset_Handler, .-Reset_Handler
 
 /**
- * @brief  HardFault handler - turn on red LED (PB14) for visual indication.
- *         In Light runtime, unhandled exceptions (Constraint_Error etc.)
- *         cause a hard fault since there is no last-chance handler.
+ * @brief  HardFault handler - prints fault registers via UART, red LED on.
+ *         Extracts the stacked PC to show where the fault occurred.
  */
     .section  .text.HardFault_Handler
     .type  HardFault_Handler, %function
@@ -107,6 +106,13 @@ HardFault_Handler:
     ldr r0, =0x58020418
     mov r1, #(1 << 14)
     str r1, [r0]
+    /* Pass stacked registers to C diagnostic function.
+     * Determine which stack pointer was active (MSP or PSP). */
+    tst lr, #4
+    ite eq
+    mrseq r0, msp
+    mrsne r0, psp
+    bl hardfault_diagnostic
     b .
     .size HardFault_Handler, .-HardFault_Handler
 

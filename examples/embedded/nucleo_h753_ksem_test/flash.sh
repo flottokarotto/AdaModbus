@@ -1,25 +1,30 @@
 #!/bin/bash
-# Build, convert and flash firmware for NUCLEO-H753ZI
-# Usage: ./flash.sh
+# Build, convert and flash firmware for NUCLEO-H753ZI / NUCLEO-H743ZI2
+# Usage: ./flash.sh [nucleo_h743zi2]
 
 set -e
 
+BOARD="${1:-nucleo_h753zi}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ELF_FILE="$SCRIPT_DIR/bin/main.elf"
 BIN_FILE="$SCRIPT_DIR/bin/main.bin"
 CUBEPROG="/c/Program Files/STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin/STM32_Programmer_CLI.exe"
 
 # Build
-echo "Building..."
-(cd "$SCRIPT_DIR" && alr build)
+echo "Building for $BOARD..."
+(cd "$SCRIPT_DIR" && alr build -- -XBOARD="$BOARD")
 
-# Find objcopy from Alire ARM toolchain
+# Find arm-eabi-objcopy: first check PATH, then Alire toolchain cache
 OBJCOPY=""
-for f in /c/Users/*/AppData/Local/alire/cache/toolchains/gnat_arm_elf_*/bin/arm-eabi-objcopy.exe; do
-    [[ -x "$f" ]] && OBJCOPY="$f" && break
-done
+if command -v arm-eabi-objcopy &> /dev/null; then
+    OBJCOPY="arm-eabi-objcopy"
+else
+    for f in /c/Users/*/AppData/Local/alire/cache/toolchains/gnat_arm_elf_*/bin/arm-eabi-objcopy.exe; do
+        [[ -x "$f" ]] && OBJCOPY="$f" && break
+    done
+fi
 if [[ -z "$OBJCOPY" ]]; then
-    echo "Error: arm-eabi-objcopy not found in Alire toolchain cache"
+    echo "Error: arm-eabi-objcopy not found in PATH or Alire toolchain cache"
     exit 1
 fi
 

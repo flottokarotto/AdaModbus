@@ -1,8 +1,9 @@
---  STM32H7_HAL - Hardware Abstraction Layer for STM32H753
+--  STM32H7_HAL - Hardware Abstraction Layer for STM32H7xx
 --  Copyright (c) 2026 Florian Fischer
 --  SPDX-License-Identifier: MIT
 --
---  Low-level driver implementations for STM32H753ZI peripherals.
+--  Low-level driver implementations for NUCLEO-H753ZI and NUCLEO-H743ZI2.
+--  GPIO, RCC, USART, I2C, and ETH registers are identical between H753 and H743.
 
 with Interfaces; use Interfaces;
 with Ada_Modbus; use Ada_Modbus;
@@ -31,7 +32,7 @@ package STM32H7_HAL is
    --  GPIO            --
    ----------------------
 
-   type GPIO_Port is (Port_B, Port_C, Port_D);
+   type GPIO_Port is (Port_B, Port_C, Port_D, Port_E);
    type GPIO_Pin is range 0 .. 15;
    type GPIO_Mode is (Mode_Input, Mode_Output, Mode_AF, Mode_Analog);
    type GPIO_AF is range 0 .. 15;

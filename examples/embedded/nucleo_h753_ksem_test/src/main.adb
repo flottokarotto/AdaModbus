@@ -2,7 +2,7 @@
 --  Copyright (c) 2026 Florian Fischer
 --  SPDX-License-Identifier: MIT
 --
---  Minimal test application for NUCLEO-H753ZI:
+--  Minimal test application for NUCLEO-H753ZI / NUCLEO-H743ZI2:
 --  Connects to KSEM via Modbus TCP and outputs power readings
 --  via USART3 (ST-Link VCP, 115200 8N1).
 --
@@ -10,8 +10,8 @@
 --    ./flash.sh
 
 with Interfaces; use Interfaces;
-with Interfaces.C; use Interfaces.C;
 with Ada_Modbus; use Ada_Modbus;
+with System;
 with STM32H7_HAL;
 with HAL_Stubs;
 with TCP_Client;
@@ -37,7 +37,23 @@ begin
    --  Initialize USART3 for serial console (ST-Link VCP)
    STM32H7_HAL.USART3_Init (115_200);
 
-   UART_Console.Put_Line ("NUCLEO-H753ZI KSEM Test");
+   --  Print board name from C preprocessor define
+   declare
+      function Get_Board_Name return System.Address
+        with Import, Convention => C, External_Name => "get_board_name";
+      function Get_Board_Name_Length return Integer
+        with Import, Convention => C, External_Name => "get_board_name_length";
+
+      Name_Addr : constant System.Address := Get_Board_Name;
+      Name_Len  : constant Natural := Natural (Get_Board_Name_Length);
+      Name_Bytes : array (0 .. Name_Len - 1) of Unsigned_8
+        with Address => Name_Addr, Import;
+   begin
+      for I in Name_Bytes'Range loop
+         STM32H7_HAL.USART3_Send_Byte (Name_Bytes (I));
+      end loop;
+   end;
+   UART_Console.Put_Line (" KSEM Test");
    UART_Console.Put_Line ("Initializing Ethernet...");
 
    --  Initialize Ethernet/TCP
@@ -202,24 +218,29 @@ begin
             Data   : KSEM_Client.Power_Data;
             Result : Status;
          begin
+            UART_Console.Put ("[");
+            UART_Console.Put_Int (Integer_32 (HAL_Stubs.Get_Tick_Ms / 1000));
+            UART_Console.Put ("s] read...");
             KSEM_Client.Read_Power (Data, Result);
+            UART_Console.Put ("rc=");
+            UART_Console.Put_Int (Integer_32 (Status'Pos (Result)));
 
             if Result = Success and then Data.Valid then
                HAL_Stubs.Set_LED (HAL_Stubs.LED_Red, False);
                HAL_Stubs.Set_LED (HAL_Stubs.LED_Yellow, True);
                Blue_Off_Time := HAL_Stubs.Get_Tick_Ms + Blue_Pulse_Ms;
-               UART_Console.Put ("Grid: ");
+               UART_Console.Put (" Grid:");
                UART_Console.Put_Int (Data.Total_Power_W);
-               UART_Console.Put ("W  L1:");
+               UART_Console.Put ("W L1:");
                UART_Console.Put_Int (Data.Phase_L1_W);
-               UART_Console.Put ("  L2:");
+               UART_Console.Put (" L2:");
                UART_Console.Put_Int (Data.Phase_L2_W);
-               UART_Console.Put ("  L3:");
+               UART_Console.Put (" L3:");
                UART_Console.Put_Int (Data.Phase_L3_W);
                UART_Console.Put_Line ("W");
             else
                HAL_Stubs.Set_LED (HAL_Stubs.LED_Red, True);
-               UART_Console.Put_Line ("KSEM read failed");
+               UART_Console.Put_Line (" FAIL");
             end if;
          end;
       end if;

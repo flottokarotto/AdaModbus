@@ -118,6 +118,10 @@ static void low_level_init(struct netif *netif)
   uint8_t macaddress[6] = {ETH_MAC_ADDR0, ETH_MAC_ADDR1, ETH_MAC_ADDR2,
                            ETH_MAC_ADDR3, ETH_MAC_ADDR4, ETH_MAC_ADDR5};
 
+  /* Make bus faults precise so HardFault diagnostic shows the exact
+   * faulting instruction (ACTLR.DISDEFWBUF disables write buffer). */
+  *(volatile uint32_t *)0xE000E008 |= (1U << 1);
+
   EthHandle.Instance = ETH;
   EthHandle.Init.MACAddr = macaddress;
   EthHandle.Init.MediaInterface = HAL_ETH_RMII_MODE;
@@ -229,6 +233,13 @@ static struct pbuf *low_level_input(struct netif *netif)
   if (RxAllocStatus == RX_ALLOC_OK)
   {
     HAL_ETH_ReadData(&EthHandle, (void **)&p);
+  }
+  else
+  {
+    /* RX pool was exhausted.  Reset status so the next poll retries.
+     * HAL_ETH_ReadData will call RxAllocateCallback again which
+     * will succeed once pbufs are freed by the application. */
+    RxAllocStatus = RX_ALLOC_OK;
   }
   return p;
 }
@@ -465,6 +476,18 @@ void HAL_ETH_RxLinkCallback(void **pStart, void **pEnd, uint8_t *buff, uint16_t 
   struct pbuf **ppStart = (struct pbuf **)pStart;
   struct pbuf **ppEnd = (struct pbuf **)pEnd;
   struct pbuf *p = NULL;
+
+  /* Guard: buff can be NULL or stale if RX pool was exhausted.
+   * Validate that buff falls within the RX pool memory region. */
+  if (buff == NULL || Length == 0)
+    return;
+
+  {
+    uint8_t *pool_start = memp_memory_RX_POOL_base;
+    uint8_t *pool_end   = pool_start + ETH_RX_BUFFER_CNT * sizeof(RxBuff_t);
+    if (buff < pool_start || buff >= pool_end)
+      return;  /* stale/corrupt DMA descriptor pointer, drop frame */
+  }
 
   p = (struct pbuf *)(buff - offsetof(RxBuff_t, buff));
   p->next = NULL;

@@ -116,17 +116,10 @@ package body STM32H7_HAL is
       end;
 
       --  Configure LED pins as outputs
-      --  PB0 (LD1 green), PE1 (LD2 yellow, MB1364E), PB14 (LD3 red)
+      --  PB0 (LD1 green), PE1 (LD2 yellow), PB14 (LD3 red)
       GPIO_Set_Mode (Port_B, 0, Mode_Output);
+      GPIO_Set_Mode (Port_E, 1, Mode_Output);
       GPIO_Set_Mode (Port_B, 14, Mode_Output);
-
-      --  PE1 (LD2 blue) - configured directly via GPIOE MODER
-      declare
-         Reg : MODER_Register := GPIOE_Periph.MODER;
-      begin
-         Reg.Arr (1) := GPIO_Mode_Val_Output;
-         GPIOE_Periph.MODER := Reg;
-      end;
 
       --  Configure PC13 (Button B1) as input
       GPIO_Set_Mode (Port_C, 13, Mode_Input);
@@ -168,6 +161,10 @@ package body STM32H7_HAL is
             Reg := GPIOD_Periph.MODER;
             Reg.Arr (Natural (Pin)) := Mode_Val;
             GPIOD_Periph.MODER := Reg;
+         when Port_E =>
+            Reg := GPIOE_Periph.MODER;
+            Reg.Arr (Natural (Pin)) := Mode_Val;
+            GPIOE_Periph.MODER := Reg;
       end case;
    end GPIO_Set_Mode;
 
@@ -205,6 +202,13 @@ package body STM32H7_HAL is
                   Reg.Arr (Natural (Pin)) := AF_Val;
                   GPIOD_Periph.AFRL := Reg;
                end;
+            when Port_E =>
+               declare
+                  Reg : AFRL_Register := GPIOE_Periph.AFRL;
+               begin
+                  Reg.Arr (Natural (Pin)) := AF_Val;
+                  GPIOE_Periph.AFRL := Reg;
+               end;
          end case;
       else
          case Port is
@@ -228,6 +232,13 @@ package body STM32H7_HAL is
                begin
                   Reg.Arr (Natural (Pin)) := AF_Val;
                   GPIOD_Periph.AFRH := Reg;
+               end;
+            when Port_E =>
+               declare
+                  Reg : AFRH_Register := GPIOE_Periph.AFRH;
+               begin
+                  Reg.Arr (Natural (Pin)) := AF_Val;
+                  GPIOE_Periph.AFRH := Reg;
                end;
          end case;
       end if;
@@ -256,6 +267,7 @@ package body STM32H7_HAL is
          when Port_B => GPIOB_Periph.BSRR := Reg;
          when Port_C => GPIOC_Periph.BSRR := Reg;
          when Port_D => GPIOD_Periph.BSRR := Reg;
+         when Port_E => GPIOE_Periph.BSRR := Reg;
       end case;
    end GPIO_Write;
 
@@ -272,6 +284,7 @@ package body STM32H7_HAL is
          when Port_B => return GPIOB_Periph.IDR.ID.Arr (Natural (Pin));
          when Port_C => return GPIOC_Periph.IDR.ID.Arr (Natural (Pin));
          when Port_D => return GPIOD_Periph.IDR.ID.Arr (Natural (Pin));
+         when Port_E => return GPIOE_Periph.IDR.ID.Arr (Natural (Pin));
       end case;
    end GPIO_Read;
 
@@ -289,6 +302,7 @@ package body STM32H7_HAL is
          when Port_B => Current := GPIOB_Periph.ODR.OD.Arr (Natural (Pin));
          when Port_C => Current := GPIOC_Periph.ODR.OD.Arr (Natural (Pin));
          when Port_D => Current := GPIOD_Periph.ODR.OD.Arr (Natural (Pin));
+         when Port_E => Current := GPIOE_Periph.ODR.OD.Arr (Natural (Pin));
       end case;
 
       GPIO_Write (Port, Pin, not Current);
@@ -640,7 +654,7 @@ package body STM32H7_HAL is
    begin
       Tick_Counter := Tick_Counter + 1;
 
-      --  Heartbeat: toggle green LED (PB0) every 500 ms
+      --  Heartbeat: toggle LD1 green (PB0) every 500 ms
       if Tick_Counter mod 500 = 0 then
          GPIO_Toggle (Port_B, 0);
       end if;
