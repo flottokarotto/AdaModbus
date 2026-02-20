@@ -118,9 +118,9 @@ static void low_level_init(struct netif *netif)
   uint8_t macaddress[6] = {ETH_MAC_ADDR0, ETH_MAC_ADDR1, ETH_MAC_ADDR2,
                            ETH_MAC_ADDR3, ETH_MAC_ADDR4, ETH_MAC_ADDR5};
 
-  /* Make bus faults precise so HardFault diagnostic shows the exact
-   * faulting instruction (ACTLR.DISDEFWBUF disables write buffer). */
-  *(volatile uint32_t *)0xE000E008 |= (1U << 1);
+  /* Note: On Cortex-M7 (STM32H7), ACTLR bit layout differs from M3/M4.
+   * There is no simple DISDEFWBUF bit to make bus faults precise.
+   * HardFault diagnostics may show IMPRECISERR with approximate PC. */
 
   EthHandle.Instance = ETH;
   EthHandle.Init.MACAddr = macaddress;
@@ -509,7 +509,10 @@ void HAL_ETH_RxLinkCallback(void **pStart, void **pEnd, uint8_t *buff, uint16_t 
     p->tot_len += Length;
   }
 
-  SCB_InvalidateDCache_by_Addr((uint32_t *)buff, Length);
+  /* D-Cache is NOT enabled in this project (no SCB_EnableDCache call),
+   * so no cache invalidation is needed — SRAM2 data is already coherent.
+   * NOTE: calling SCB_InvalidateDCache_by_Addr with D-Cache disabled can
+   * cause IMPRECISERR HardFault on some Cortex-M7 silicon revisions. */
 }
 
 void HAL_ETH_TxFreeCallback(uint32_t *buff)
