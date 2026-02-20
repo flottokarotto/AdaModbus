@@ -127,32 +127,32 @@ package body KSEM_Client is
          Raw_L2    := To_Int16 (Unsigned_16 (Values (2)));
          Raw_L3    := To_Int16 (Unsigned_16 (Values (3)));
 
-         --  Apply scale factor (typically 0 or -1)
-         --  SF=0: value in Watts
-         --  SF=-1: value * 0.1 = value / 10
-         --  SF=1: value * 10
-         if Scale_Factor = 0 then
-            Data.Total_Power_W := Integer_32 (Raw_Total);
-            Data.Phase_L1_W    := Integer_32 (Raw_L1);
-            Data.Phase_L2_W    := Integer_32 (Raw_L2);
-            Data.Phase_L3_W    := Integer_32 (Raw_L3);
-         elsif Scale_Factor = -1 then
-            Data.Total_Power_W := Integer_32 (Raw_Total) / 10;
-            Data.Phase_L1_W    := Integer_32 (Raw_L1) / 10;
-            Data.Phase_L2_W    := Integer_32 (Raw_L2) / 10;
-            Data.Phase_L3_W    := Integer_32 (Raw_L3) / 10;
-         elsif Scale_Factor = 1 then
-            Data.Total_Power_W := Integer_32 (Raw_Total) * 10;
-            Data.Phase_L1_W    := Integer_32 (Raw_L1) * 10;
-            Data.Phase_L2_W    := Integer_32 (Raw_L2) * 10;
-            Data.Phase_L3_W    := Integer_32 (Raw_L3) * 10;
-         else
-            --  Unsupported scale factor, use raw values
-            Data.Total_Power_W := Integer_32 (Raw_Total);
-            Data.Phase_L1_W    := Integer_32 (Raw_L1);
-            Data.Phase_L2_W    := Integer_32 (Raw_L2);
-            Data.Phase_L3_W    := Integer_32 (Raw_L3);
-         end if;
+         --  Apply scale factor: actual_value = raw * 10^SF
+         --  SF=0: Watts, SF=-1: deciWatts, SF=-2: centiWatts, etc.
+         --  KSEM may change SF dynamically based on value magnitude.
+         declare
+            function Apply_SF
+              (Raw : Integer_16; SF : Integer_16) return Integer_32
+            is
+               V : Integer_32 := Integer_32 (Raw);
+            begin
+               if SF > 0 then
+                  for I in 1 .. SF loop
+                     V := V * 10;
+                  end loop;
+               elsif SF < 0 then
+                  for I in SF .. -1 loop
+                     V := V / 10;
+                  end loop;
+               end if;
+               return V;
+            end Apply_SF;
+         begin
+            Data.Total_Power_W := Apply_SF (Raw_Total, Scale_Factor);
+            Data.Phase_L1_W    := Apply_SF (Raw_L1, Scale_Factor);
+            Data.Phase_L2_W    := Apply_SF (Raw_L2, Scale_Factor);
+            Data.Phase_L3_W    := Apply_SF (Raw_L3, Scale_Factor);
+         end;
 
          Data.Valid := True;
          Last_Power := Data;
