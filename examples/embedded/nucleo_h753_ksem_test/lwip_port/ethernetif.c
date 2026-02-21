@@ -509,10 +509,62 @@ void HAL_ETH_RxLinkCallback(void **pStart, void **pEnd, uint8_t *buff, uint16_t 
     p->tot_len += Length;
   }
 
-  /* D-Cache is NOT enabled in this project (no SCB_EnableDCache call),
-   * so no cache invalidation is needed — SRAM2 data is already coherent.
-   * NOTE: calling SCB_InvalidateDCache_by_Addr with D-Cache disabled can
-   * cause IMPRECISERR HardFault on some Cortex-M7 silicon revisions. */
+  /*--------------------------------------------------------------------------
+   * D-Cache Invalidation — Known STM32CubeH7 Bug & Our Workaround
+   *--------------------------------------------------------------------------
+   *
+   * ST's official LwIP examples (STM32CubeH7 v1.12.1 and earlier) contain
+   * a cache invalidation bug here. The original code reads:
+   *
+   *     SCB_InvalidateDCache_by_Addr((uint32_t *)buff, Length);
+   *
+   * This is incorrect for two reasons:
+   *
+   * 1. CACHE LINE ALIGNMENT: SCB_InvalidateDCache_by_Addr operates on
+   *    32-byte cache lines (Cortex-M7). If 'Length' is not a multiple of 32,
+   *    the last partial cache line gets invalidated, discarding adjacent data
+   *    that shares that cache line — causing silent memory corruption.
+   *    The 'buff' pointer must also be 32-byte aligned for the same reason.
+   *
+   *    Correct usage (if D-Cache were enabled):
+   *
+   *      SCB_InvalidateDCache_by_Addr(
+   *          (uint32_t *)buff,
+   *          (Length + __SCB_DCACHE_LINE_SIZE - 1)
+   *              & ~(__SCB_DCACHE_LINE_SIZE - 1));
+   *
+   *    Plus: RX buffer pool must be 32-byte aligned (address AND size).
+   *
+   * 2. HARDFAULT WITH D-CACHE DISABLED: On some Cortex-M7 silicon revisions,
+   *    calling SCB_InvalidateDCache_by_Addr when D-Cache is not enabled
+   *    triggers an IMPRECISERR BusFault / HardFault.
+   *
+   * OUR APPROACH: D-Cache is intentionally NOT enabled in this project
+   * (no SCB_EnableDCache() call). RX/TX buffers reside in SRAM2, which is
+   * directly coherent with the Ethernet DMA — no cache invalidation needed.
+   * This sidesteps both issues entirely, at the cost of slightly lower CPU
+   * performance on memory-intensive operations.
+   *
+   * ALTERNATIVE APPROACHES (if you need D-Cache for performance):
+   *   a) Configure MPU to mark the DMA buffer region as non-cacheable
+   *      (Device or Strongly-Ordered), keep D-Cache enabled for everything else.
+   *   b) Place DMA buffers in a dedicated non-cached RAM section via linker script
+   *      (e.g., SRAM3 or AXI SRAM with MPU non-cacheable attribute).
+   *   c) Use SCB_CleanInvalidateDCache_by_Addr with properly aligned buffers
+   *      (clean+invalidate is safer than invalidate-only, but slower).
+   *
+   * REFERENCES:
+   *   - ST Community bug report with fixes:
+   *     https://community.st.com/t5/stm32-mcus-embedded-software/bug-fixes-stm32h7-ethernet/m-p/281420
+   *   - SCB_InvalidateDCache_by_Addr alignment issue:
+   *     https://community.st.com/t5/stm32-mcus-products/scb-invalidatedcache-by-addr-not-operating-correctly/td-p/118256
+   *   - STM32H7 Ethernet + DMA + Cache deep dive:
+   *     https://community.st.com/t5/stm32-mcus-embedded-software/stm32h7-ethernet-dma-cache-explained-lwip-without-any-os-this/td-p/792143
+   *   - GitHub issue (DCache not invalidated in pbuf_free_custom):
+   *     https://github.com/STMicroelectronics/STM32CubeH7/issues/244
+   *   - Buggy original code (still unfixed in STM32CubeH7 master as of 2026-02):
+   *     https://github.com/STMicroelectronics/STM32CubeH7/blob/master/Projects/NUCLEO-H743ZI/Applications/LwIP/LwIP_HTTP_Server_Netconn_RTOS/Src/ethernetif.c
+   *--------------------------------------------------------------------------*/
 }
 
 void HAL_ETH_TxFreeCallback(uint32_t *buff)
