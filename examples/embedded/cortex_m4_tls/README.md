@@ -38,10 +38,10 @@ Exit QEMU with `Ctrl+A`, then `X`.
 
 ```bash
 # Loopback mode with mbedTLS stubs (for CI, smaller binary)
-alr exec -- gprbuild -P cortex_m4_tls.gpr -XMBEDTLS_MODE=loopback
+alr build -- -XMBEDTLS_MODE=loopback
 
 # Full mbedTLS (for real TLS operations)
-alr exec -- gprbuild -P cortex_m4_tls.gpr -XMBEDTLS_MODE=full
+alr build -- -XMBEDTLS_MODE=full
 ```
 
 ## Memory Usage

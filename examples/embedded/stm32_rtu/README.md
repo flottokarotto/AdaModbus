@@ -10,10 +10,10 @@ The examples use the LM3S6965EVB board emulation in QEMU because it has good sem
 cd examples/embedded/stm32_rtu
 
 # Build the slave
-alr exec -- gprbuild -P stm32_rtu.gpr -XMAIN=slave
+alr build -- -XMAIN=slave
 
 # Build the master
-alr exec -- gprbuild -P stm32_rtu.gpr -XMAIN=master
+alr build -- -XMAIN=master
 ```
 
 ## Running in QEMU
