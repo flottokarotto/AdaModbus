@@ -16,7 +16,7 @@ package Config is
    --  NUCLEO-H753ZI IP Configuration (static)
    Local_IP_A : constant Unsigned_8 := 192;
    Local_IP_B : constant Unsigned_8 := 168;
-   Local_IP_C : constant Unsigned_8 := 42;
+   Local_IP_C : constant Unsigned_8 := 137;
    Local_IP_D : constant Unsigned_8 := 5;
 
    Local_Netmask_A : constant Unsigned_8 := 255;
@@ -26,7 +26,7 @@ package Config is
 
    Local_Gateway_A : constant Unsigned_8 := 192;
    Local_Gateway_B : constant Unsigned_8 := 168;
-   Local_Gateway_C : constant Unsigned_8 := 42;
+   Local_Gateway_C : constant Unsigned_8 := 137;
    Local_Gateway_D : constant Unsigned_8 := 1;
 
    --  KSEM (Kostal Smart Energy Meter) IP Address
