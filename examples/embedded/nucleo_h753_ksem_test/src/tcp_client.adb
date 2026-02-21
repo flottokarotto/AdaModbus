@@ -327,6 +327,10 @@ package body TCP_Client is
       Err := TCP_Write (Current_PCB, Data'Address, Unsigned_16 (Data'Length),
                         TCP_WRITE_FLAG_COPY);
       if Err /= ERR_OK then
+         --  Send buffer full — connection is likely dead (unacked data).
+         --  Tear down so the reconnect logic in the main loop can recover.
+         Cleanup_PCB;
+         Current_State := Disconnected;
          Result := Buffer_Too_Small;
          return;
       end if;
@@ -334,6 +338,8 @@ package body TCP_Client is
       --  Trigger sending
       Err := TCP_Output (Current_PCB);
       if Err /= ERR_OK then
+         Cleanup_PCB;
+         Current_State := Disconnected;
          Result := Timeout;
          return;
       end if;
@@ -374,6 +380,12 @@ package body TCP_Client is
          end if;
 
          if STM32H7_HAL.Get_Tick - Start_Time > Timeout_Ms then
+            --  No response within timeout — tear down the connection.
+            --  The remote is likely gone, and keeping the PCB alive would
+            --  just cause subsequent Send calls to fail with Buffer_Too_Small
+            --  until lwIP's retransmit timeout finally fires.
+            Cleanup_PCB;
+            Current_State := Disconnected;
             Result := Timeout;
             return;
          end if;
