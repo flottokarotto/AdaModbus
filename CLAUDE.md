@@ -960,7 +960,15 @@ AdaModbus/
 │   ├── alire.toml
 │   ├── adamodbus_tls.gpr
 │   └── src/            -- TLS-Transport (AWS, Non-SPARK)
-├── examples/
+├── examples/           -- Desktop-Beispiele (examples.gpr)
+│   └── embedded/       -- Embedded-Beispiele (eigene Alire-Crates)
+│       ├── stm32_rtu/
+│       ├── cortex_m4_tls/
+│       └── nucleo_h753_ksem_test/
+├── tls_mbed/           -- Separates Alire-Crate: adamodbus_tls_mbed
+│   ├── alire.toml
+│   ├── adamodbus_tls_mbed.gpr
+│   └── src/            -- TLS-Transport (mbedTLS, Embedded)
 ├── tests/
 ├── adamodbus.gpr       -- Kern-Bibliothek (SPARK-verifizierbar)
 ├── alire.toml          -- Alire-Crate: adamodbus
@@ -1024,47 +1032,31 @@ tests/
 
 **236 Unit-Tests** für alle Funktionscodes und Protokollschichten.
 
-### Testprogramme (Windows)
+### Beispielprogramme
 
-Zwei ausführbare Programme für manuelle Tests und Demonstration:
+Alle Beispiele liegen direkt in `examples/` und werden über `examples.gpr` gebaut:
 
-```
-examples/
-├── master_demo/
-│   ├── master_demo.adb      -- Modbus Master/Client Testprogramm
-│   └── master_demo.gpr
-└── slave_demo/
-    ├── slave_demo.adb       -- Modbus Slave/Server Testprogramm
-    └── slave_demo.gpr
+```bash
+alr exec -- gprbuild -P examples/examples.gpr
 ```
 
-#### Master Demo (Client)
-
-```ada
--- Funktionen:
--- - Verbindung zu Slave (TCP oder Serial)
--- - Interaktive Kommandozeile oder Skript-Modus
--- - Alle Funktionscodes testen
--- - Response-Anzeige
-
--- Beispiel-Aufruf:
--- master_demo --tcp 127.0.0.1:502
--- master_demo --serial COM3 --baud 9600
-```
-
-#### Slave Demo (Server)
-
-```ada
--- Funktionen:
--- - Simulierter Modbus Slave
--- - Konfigurierbare Register/Coil-Bereiche
--- - Logging aller Requests
--- - Einfache Daten-Simulation
-
--- Beispiel-Aufruf:
--- slave_demo --tcp 502 --unit-id 1
--- slave_demo --serial COM3 --baud 9600
-```
+| Programm | Beschreibung |
+|----------|--------------|
+| `tcp_master` / `tcp_slave` | Modbus TCP Master und Slave |
+| `rtu_master` / `rtu_slave` | Modbus RTU über serielle Schnittstelle |
+| `ascii_master` / `ascii_slave` | Modbus ASCII über serielle Schnittstelle |
+| `async_master` | Asynchroner Master mit Callback-API |
+| `loopback_example` | Lokaler Loopback-Test ohne Hardware |
+| `slave_example` | Slave mit Callback-Registrierung |
+| `device_simulator` | Simulierter Modbus-Slave |
+| `multi_slave_poll` | Mehrere Slaves abfragen |
+| `diagnostics_demo` | FC 07/08 Diagnose-Funktionen |
+| `modbus_gateway` | TCP↔RTU Gateway |
+| `data_logger` | Register-Werte loggen |
+| `kostal_dashboard` / `kostal_reader` | Kostal Inverter Dashboard/Reader |
+| `ksem_dashboard` / `ksem_reader` | Kostal Smart Energy Meter |
+| `go_e_dashboard` / `go_e_simulator` | go-e Charger Wallbox |
+| `terminal_dashboard` | Terminal-basiertes Dashboard |
 
 ### Test-Strategie
 
