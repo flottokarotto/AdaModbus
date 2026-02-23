@@ -22,6 +22,7 @@ with Test_Certificates;
 
 --  For semihosting output
 with Semihosting;
+with Last_Chance_Handler;
 
 procedure Main_TLS_Server is
 
@@ -114,6 +115,7 @@ procedure Main_TLS_Server is
    end Handle_Read_Registers;
 
 begin
+   Last_Chance_Handler.Set_Output (Semihosting.Put_Byte'Access);
    Put_Line ("=== Modbus TLS Server Test ===");
    Put_Line ("");
 

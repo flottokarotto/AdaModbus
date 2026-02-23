@@ -21,6 +21,9 @@ package Semihosting is
    --  Write a single character
    procedure Put_Char (C : Character);
 
+   --  Write a raw byte (for use as Last_Chance_Handler callback)
+   procedure Put_Byte (B : Unsigned_8);
+
    --  Write a newline
    procedure New_Line;
 

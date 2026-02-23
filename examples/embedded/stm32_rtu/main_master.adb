@@ -10,6 +10,7 @@ with STM32_SysTick;
 with Ada_Modbus; use Ada_Modbus;
 with Semihosting;
 with Interfaces;
+with Last_Chance_Handler;
 
 procedure Main_Master is
    Values : Register_Array (0 .. 4);
@@ -25,6 +26,7 @@ procedure Main_Master is
    Test_Passed      : Boolean := True;
 
 begin
+   Last_Chance_Handler.Set_Output (Semihosting.Put_Byte'Access);
    Semihosting.Put_Line ("=== Modbus RTU Master Test ===");
    Semihosting.Put_Line ("Initializing...");
 

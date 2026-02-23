@@ -9,6 +9,7 @@ with STM32_SysTick;
 with Ada_Modbus;
 with Semihosting;
 with Interfaces;
+with Last_Chance_Handler;
 
 procedure Main_Slave is
    use Ada_Modbus;
@@ -17,6 +18,7 @@ procedure Main_Slave is
    Uptime_Seconds : Interfaces.Unsigned_32;
    Last_Count     : Interfaces.Unsigned_32 := 0;
 begin
+   Last_Chance_Handler.Set_Output (Semihosting.Put_Byte'Access);
    Semihosting.Put_Line ("=== Modbus RTU Slave ===");
    Semihosting.Put_Line ("Initializing...");
 
