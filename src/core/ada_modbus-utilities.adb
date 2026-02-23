@@ -3,32 +3,36 @@
 --  SPDX-License-Identifier: MIT
 
 with Ada.Unchecked_Conversion;
+with System;
 
 package body Ada_Modbus.Utilities
   with SPARK_Mode => On
 is
 
+   use type System.Bit_Order;
+
    --  Record overlays for combining/splitting words and bytes.
-   --  Layout assumes little-endian storage (x86, ARM Cortex-M).
+   --  Field names reflect memory position (B0/W0 = lower address).
+   --  Endian-aware accessors below map position to logical Hi/Lo.
 
    type Byte_Pair is record
-      Lo : Byte;
-      Hi : Byte;
+      B0 : Byte;
+      B1 : Byte;
    end record with Size => 16;
 
    for Byte_Pair use record
-      Lo at 0 range 0 .. 7;
-      Hi at 1 range 0 .. 7;
+      B0 at 0 range 0 .. 7;
+      B1 at 1 range 0 .. 7;
    end record;
 
    type Word_Pair is record
-      Lo : Register_Value;
-      Hi : Register_Value;
+      W0 : Register_Value;
+      W1 : Register_Value;
    end record with Size => 32;
 
    for Word_Pair use record
-      Lo at 0 range 0 .. 15;
-      Hi at 2 range 0 .. 15;
+      W0 at 0 range 0 .. 15;
+      W1 at 2 range 0 .. 15;
    end record;
 
    function To_Reg is new Ada.Unchecked_Conversion (Byte_Pair, Register_Value);
@@ -38,10 +42,36 @@ is
    function To_F32 is new Ada.Unchecked_Conversion (Word_Pair, IEEE_Float_32);
    function From_F32 is new Ada.Unchecked_Conversion (IEEE_Float_32, Word_Pair);
 
+   --  Endian-aware accessors: on LE B0/W0 is low, on BE B0/W0 is high.
+   --  System.Default_Bit_Order is static, so the compiler eliminates
+   --  the dead branch.
+
+   function Lo_Byte (B : Byte_Pair) return Byte is
+     (if System.Default_Bit_Order = System.Low_Order_First then B.B0 else B.B1);
+
+   function Hi_Byte (B : Byte_Pair) return Byte is
+     (if System.Default_Bit_Order = System.Low_Order_First then B.B1 else B.B0);
+
+   function Make_Reg (Lo, Hi : Byte) return Register_Value is
+     (if System.Default_Bit_Order = System.Low_Order_First
+      then To_Reg ((B0 => Lo, B1 => Hi))
+      else To_Reg ((B0 => Hi, B1 => Lo)));
+
+   function Lo_Word (W : Word_Pair) return Register_Value is
+     (if System.Default_Bit_Order = System.Low_Order_First then W.W0 else W.W1);
+
+   function Hi_Word (W : Word_Pair) return Register_Value is
+     (if System.Default_Bit_Order = System.Low_Order_First then W.W1 else W.W0);
+
+   function Make_Words (Lo, Hi : Register_Value) return Word_Pair is
+     (if System.Default_Bit_Order = System.Low_Order_First
+      then (W0 => Lo, W1 => Hi)
+      else (W0 => Hi, W1 => Lo));
+
    function Swap_Bytes (V : Register_Value) return Register_Value is
       B : constant Byte_Pair := To_Bytes (V);
    begin
-      return To_Reg ((Lo => B.Hi, Hi => B.Lo));
+      return Make_Reg (Lo => Hi_Byte (B), Hi => Lo_Byte (B));
    end Swap_Bytes;
 
    -------------------
@@ -51,7 +81,7 @@ is
    function To_Big_Endian (Value : Register_Value) return Byte_Array is
       B : constant Byte_Pair := To_Bytes (Value);
    begin
-      return [B.Hi, B.Lo];
+      return [Hi_Byte (B), Lo_Byte (B)];
    end To_Big_Endian;
 
    --------------------
@@ -60,7 +90,7 @@ is
 
    function From_Big_Endian (High, Low : Byte) return Register_Value is
    begin
-      return To_Reg ((Lo => Low, Hi => High));
+      return Make_Reg (Lo => Low, Hi => High);
    end From_Big_Endian;
 
    function From_Big_Endian (Data : Byte_Array) return Register_Value is
@@ -74,7 +104,7 @@ is
 
    function High_Byte (Value : Register_Value) return Byte is
    begin
-      return To_Bytes (Value).Hi;
+      return Hi_Byte (To_Bytes (Value));
    end High_Byte;
 
    --------------
@@ -83,7 +113,7 @@ is
 
    function Low_Byte (Value : Register_Value) return Byte is
    begin
-      return To_Bytes (Value).Lo;
+      return Lo_Byte (To_Bytes (Value));
    end Low_Byte;
 
    -------------------
@@ -99,21 +129,21 @@ is
       case Order is
          when Big_Endian =>
             --  ABCD: High word first, standard Modbus/SunSpec
-            return To_U32 ((Lo => Low_Word, Hi => High_Word));
+            return To_U32 (Make_Words (Lo => Low_Word, Hi => High_Word));
 
          when Little_Endian =>
             --  DCBA: bytes fully reversed
-            return To_U32 ((Lo => Swap_Bytes (High_Word),
-                            Hi => Swap_Bytes (Low_Word)));
+            return To_U32 (Make_Words (Lo => Swap_Bytes (High_Word),
+                                       Hi => Swap_Bytes (Low_Word)));
 
          when Mid_Big_Endian =>
             --  BADC: bytes swapped within each word
-            return To_U32 ((Lo => Swap_Bytes (Low_Word),
-                            Hi => Swap_Bytes (High_Word)));
+            return To_U32 (Make_Words (Lo => Swap_Bytes (Low_Word),
+                                       Hi => Swap_Bytes (High_Word)));
 
          when Mid_Little_Endian =>
             --  CDAB: words swapped (low word first)
-            return To_U32 ((Lo => High_Word, Hi => Low_Word));
+            return To_U32 (Make_Words (Lo => High_Word, Hi => Low_Word));
       end case;
    end To_Unsigned_32;
 
@@ -132,23 +162,23 @@ is
       case Order is
          when Big_Endian =>
             --  ABCD
-            High_Word := W.Hi;
-            Low_Word  := W.Lo;
+            High_Word := Hi_Word (W);
+            Low_Word  := Lo_Word (W);
 
          when Little_Endian =>
             --  DCBA: bytes fully reversed
-            High_Word := Swap_Bytes (W.Lo);
-            Low_Word  := Swap_Bytes (W.Hi);
+            High_Word := Swap_Bytes (Lo_Word (W));
+            Low_Word  := Swap_Bytes (Hi_Word (W));
 
          when Mid_Big_Endian =>
             --  BADC: bytes swapped within each word
-            High_Word := Swap_Bytes (W.Hi);
-            Low_Word  := Swap_Bytes (W.Lo);
+            High_Word := Swap_Bytes (Hi_Word (W));
+            Low_Word  := Swap_Bytes (Lo_Word (W));
 
          when Mid_Little_Endian =>
             --  CDAB: words swapped (low word first)
-            High_Word := W.Lo;
-            Low_Word  := W.Hi;
+            High_Word := Lo_Word (W);
+            Low_Word  := Hi_Word (W);
       end case;
    end From_Unsigned_32;
 
@@ -176,18 +206,18 @@ is
    begin
       case Order is
          when Big_Endian =>
-            return To_F32 ((Lo => Low_Word, Hi => High_Word));
+            return To_F32 (Make_Words (Lo => Low_Word, Hi => High_Word));
 
          when Little_Endian =>
-            return To_F32 ((Lo => Swap_Bytes (High_Word),
-                            Hi => Swap_Bytes (Low_Word)));
+            return To_F32 (Make_Words (Lo => Swap_Bytes (High_Word),
+                                       Hi => Swap_Bytes (Low_Word)));
 
          when Mid_Big_Endian =>
-            return To_F32 ((Lo => Swap_Bytes (Low_Word),
-                            Hi => Swap_Bytes (High_Word)));
+            return To_F32 (Make_Words (Lo => Swap_Bytes (Low_Word),
+                                       Hi => Swap_Bytes (High_Word)));
 
          when Mid_Little_Endian =>
-            return To_F32 ((Lo => High_Word, Hi => Low_Word));
+            return To_F32 (Make_Words (Lo => High_Word, Hi => Low_Word));
       end case;
    end To_Float_32;
 
@@ -205,20 +235,20 @@ is
    begin
       case Order is
          when Big_Endian =>
-            High_Word := W.Hi;
-            Low_Word  := W.Lo;
+            High_Word := Hi_Word (W);
+            Low_Word  := Lo_Word (W);
 
          when Little_Endian =>
-            High_Word := Swap_Bytes (W.Lo);
-            Low_Word  := Swap_Bytes (W.Hi);
+            High_Word := Swap_Bytes (Lo_Word (W));
+            Low_Word  := Swap_Bytes (Hi_Word (W));
 
          when Mid_Big_Endian =>
-            High_Word := Swap_Bytes (W.Hi);
-            Low_Word  := Swap_Bytes (W.Lo);
+            High_Word := Swap_Bytes (Hi_Word (W));
+            Low_Word  := Swap_Bytes (Lo_Word (W));
 
          when Mid_Little_Endian =>
-            High_Word := W.Lo;
-            Low_Word  := W.Hi;
+            High_Word := Lo_Word (W);
+            Low_Word  := Hi_Word (W);
       end case;
    end From_Float_32;
 
