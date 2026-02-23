@@ -164,7 +164,7 @@ package body Ada_Modbus.Transport.LwIP is
          0);
 
       if Sent < 0 then
-         Conn.State := Error;
+         Disconnect (Conn);
          return 0;
       end if;
 
@@ -204,6 +204,7 @@ package body Ada_Modbus.Transport.LwIP is
          Timeval'Size / 8);
 
       if Ret < 0 then
+         Disconnect (Conn);
          return 0;
       end if;
 
@@ -216,7 +217,8 @@ package body Ada_Modbus.Transport.LwIP is
          0);
 
       if Received <= 0 then
-         --  Timeout or error
+         --  Timeout or connection error - close socket for clean reconnect
+         Disconnect (Conn);
          return 0;
       end if;
 

@@ -45,11 +45,14 @@ package body Ada_Modbus.Transport.TCP is
       Timeout : Duration := 5.0;
       Result  : out Status)
    is
-      pragma Unreferenced (Timeout);
       Address : Sock_Addr_Type;
    begin
       --  Create socket
       Create_Socket (Conn.Socket, Family_Inet, Socket_Stream);
+
+      --  Set send/receive timeout for connection phase
+      Set_Socket_Option (Conn.Socket, Socket_Level, (Send_Timeout, Timeout));
+      Set_Socket_Option (Conn.Socket, Socket_Level, (Receive_Timeout, Timeout));
 
       --  Resolve host
       Address.Addr := Addresses (Get_Host_By_Name (Host), 1);
@@ -180,7 +183,7 @@ package body Ada_Modbus.Transport.TCP is
       return Natural (Last);
    exception
       when Socket_Error =>
-         Conn.Current_State := Error;
+         Disconnect (Conn);
          return 0;
    end Send;
 
@@ -226,8 +229,8 @@ package body Ada_Modbus.Transport.TCP is
          Receive_Socket (Conn.Socket, Recv_Buffer, Last);
 
          if Last < 1 then
-            --  Connection closed
-            Conn.Current_State := Disconnected;
+            --  Connection closed by peer
+            Disconnect (Conn);
             return 0;
          end if;
 
@@ -242,7 +245,7 @@ package body Ada_Modbus.Transport.TCP is
       return 0;
    exception
       when Socket_Error =>
-         Conn.Current_State := Error;
+         Disconnect (Conn);
          return 0;
    end Receive;
 
@@ -315,7 +318,8 @@ package body Ada_Modbus.Transport.TCP is
          Result := Success;
       end;
    exception
-      when others =>
+      when Socket_Error =>
+         Disconnect (Conn);
          Result := Frame_Error;
    end Receive_Frame;
 
