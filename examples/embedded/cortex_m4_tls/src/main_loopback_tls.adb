@@ -16,6 +16,7 @@ with Ada_Modbus.Transport.TLS_Mbed;     use Ada_Modbus.Transport.TLS_Mbed;
 with Test_Certificates;
 with Loopback;
 with Semihosting;
+with Last_Chance_Handler;
 
 procedure Main_Loopback_TLS is
 
@@ -119,6 +120,7 @@ procedure Main_Loopback_TLS is
    end Handle_Request;
 
 begin
+   Last_Chance_Handler.Set_Output (Semihosting.Put_Byte'Access);
    Put_Line ("=== Modbus TLS Loopback Test ===");
    Put_Line ("");
 

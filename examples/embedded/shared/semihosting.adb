@@ -41,6 +41,15 @@ package body Semihosting is
       Semihost_Call (SYS_WRITEC, Char_Addr'Address);
    end Put_Char;
 
+   --------------
+   -- Put_Byte --
+   --------------
+
+   procedure Put_Byte (B : Unsigned_8) is
+   begin
+      Put_Char (Character'Val (B));
+   end Put_Byte;
+
    ---------
    -- Put --
    ---------

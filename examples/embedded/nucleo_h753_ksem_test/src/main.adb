@@ -18,6 +18,8 @@ with TCP_Client;
 with Config;
 with KSEM_Client;
 with UART_Console;
+with Last_Chance_Handler;
+with Error_LEDs;
 
 procedure Main is
 
@@ -36,6 +38,10 @@ begin
 
    --  Initialize USART3 for serial console (ST-Link VCP)
    STM32H7_HAL.USART3_Init (115_200);
+
+   --  Register exception handler (red LED + UART output)
+   Last_Chance_Handler.Set_On_Exception (Error_LEDs.On_Exception'Access);
+   Last_Chance_Handler.Set_Output (STM32H7_HAL.USART3_Send_Byte'Access);
 
    --  Print board name from C preprocessor define
    declare

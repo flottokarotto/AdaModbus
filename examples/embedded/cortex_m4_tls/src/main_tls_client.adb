@@ -21,6 +21,7 @@ with Test_Certificates;
 
 --  For semihosting output
 with Semihosting;
+with Last_Chance_Handler;
 
 procedure Main_TLS_Client is
 
@@ -49,6 +50,7 @@ procedure Main_TLS_Client is
    procedure Put_Line (S : String) renames Semihosting.Put_Line;
 
 begin
+   Last_Chance_Handler.Set_Output (Semihosting.Put_Byte'Access);
    Put_Line ("=== Modbus TLS Client Test ===");
    Put_Line ("");
 

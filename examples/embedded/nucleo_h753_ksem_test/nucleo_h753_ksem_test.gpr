@@ -41,6 +41,7 @@ project Nucleo_H753_KSEM_Test is
    for Source_Dirs use
      ("src",
       "src/svd",
+      "../shared",
       "../../../src/core",
       "../../../src/energy",
       "lwip_port",
