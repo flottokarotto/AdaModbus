@@ -50,6 +50,28 @@ is
       Order : Word_Order := Big_Endian) return Interfaces.Unsigned_32
      with Pre => Regs'Length >= 2;
 
+   --  IEEE 754 Single-Precision Float (32-bit)
+   subtype IEEE_Float_32 is Interfaces.IEEE_Float_32;
+
+   --  Combine two registers into IEEE Float32
+   function To_Float_32
+     (High_Word : Register_Value;
+      Low_Word  : Register_Value;
+      Order     : Word_Order := Big_Endian) return IEEE_Float_32;
+
+   --  Split IEEE Float32 into two registers
+   procedure From_Float_32
+     (Value     : IEEE_Float_32;
+      High_Word : out Register_Value;
+      Low_Word  : out Register_Value;
+      Order     : Word_Order := Big_Endian);
+
+   --  Convenience: register array to Float32
+   function Registers_To_Float_32
+     (Regs  : Register_Array;
+      Order : Word_Order := Big_Endian) return IEEE_Float_32
+     with Pre => Regs'Length >= 2;
+
    --  Human-readable status string (for logging/display)
    subtype Status_String is String (1 .. 24);
    function Status_Image (S : Status) return Status_String;

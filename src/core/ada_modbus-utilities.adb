@@ -2,17 +2,56 @@
 --  Copyright (c) 2026 Florian Fischer
 --  SPDX-License-Identifier: MIT
 
+with Ada.Unchecked_Conversion;
+
 package body Ada_Modbus.Utilities
   with SPARK_Mode => On
 is
+
+   --  Record overlays for combining/splitting words and bytes.
+   --  Layout assumes little-endian storage (x86, ARM Cortex-M).
+
+   type Byte_Pair is record
+      Lo : Byte;
+      Hi : Byte;
+   end record with Size => 16;
+
+   for Byte_Pair use record
+      Lo at 0 range 0 .. 7;
+      Hi at 1 range 0 .. 7;
+   end record;
+
+   type Word_Pair is record
+      Lo : Register_Value;
+      Hi : Register_Value;
+   end record with Size => 32;
+
+   for Word_Pair use record
+      Lo at 0 range 0 .. 15;
+      Hi at 2 range 0 .. 15;
+   end record;
+
+   function To_Reg is new Ada.Unchecked_Conversion (Byte_Pair, Register_Value);
+   function To_Bytes is new Ada.Unchecked_Conversion (Register_Value, Byte_Pair);
+   function To_U32 is new Ada.Unchecked_Conversion (Word_Pair, Interfaces.Unsigned_32);
+   function From_U32 is new Ada.Unchecked_Conversion (Interfaces.Unsigned_32, Word_Pair);
+   function To_F32 is new Ada.Unchecked_Conversion (Word_Pair, IEEE_Float_32);
+   function From_F32 is new Ada.Unchecked_Conversion (IEEE_Float_32, Word_Pair);
+
+   function Swap_Bytes (V : Register_Value) return Register_Value is
+      B : constant Byte_Pair := To_Bytes (V);
+   begin
+      return To_Reg ((Lo => B.Hi, Hi => B.Lo));
+   end Swap_Bytes;
 
    -------------------
    -- To_Big_Endian --
    -------------------
 
    function To_Big_Endian (Value : Register_Value) return Byte_Array is
+      B : constant Byte_Pair := To_Bytes (Value);
    begin
-      return [High_Byte (Value), Low_Byte (Value)];
+      return [B.Hi, B.Lo];
    end To_Big_Endian;
 
    --------------------
@@ -21,7 +60,7 @@ is
 
    function From_Big_Endian (High, Low : Byte) return Register_Value is
    begin
-      return Register_Value (High) * 256 + Register_Value (Low);
+      return To_Reg ((Lo => Low, Hi => High));
    end From_Big_Endian;
 
    function From_Big_Endian (Data : Byte_Array) return Register_Value is
@@ -35,7 +74,7 @@ is
 
    function High_Byte (Value : Register_Value) return Byte is
    begin
-      return Byte (Value / 256);
+      return To_Bytes (Value).Hi;
    end High_Byte;
 
    --------------
@@ -44,7 +83,7 @@ is
 
    function Low_Byte (Value : Register_Value) return Byte is
    begin
-      return Byte (Value mod 256);
+      return To_Bytes (Value).Lo;
    end Low_Byte;
 
    -------------------
@@ -56,35 +95,25 @@ is
       Low_Word  : Register_Value;
       Order     : Word_Order := Big_Endian) return Interfaces.Unsigned_32
    is
-      use type Interfaces.Unsigned_32;
-      H : constant Interfaces.Unsigned_32 := Interfaces.Unsigned_32 (High_Word);
-      L : constant Interfaces.Unsigned_32 := Interfaces.Unsigned_32 (Low_Word);
-      HH, HL, LH, LL : Interfaces.Unsigned_32;
    begin
       case Order is
          when Big_Endian =>
             --  ABCD: High word first, standard Modbus/SunSpec
-            return H * 65536 + L;
+            return To_U32 ((Lo => Low_Word, Hi => High_Word));
 
          when Little_Endian =>
-            --  DCBA: Low word first, bytes swapped
-            HH := Interfaces.Unsigned_32 (High_Byte (High_Word));
-            HL := Interfaces.Unsigned_32 (Low_Byte (High_Word));
-            LH := Interfaces.Unsigned_32 (High_Byte (Low_Word));
-            LL := Interfaces.Unsigned_32 (Low_Byte (Low_Word));
-            return LL * 16777216 + LH * 65536 + HL * 256 + HH;
+            --  DCBA: bytes fully reversed
+            return To_U32 ((Lo => Swap_Bytes (High_Word),
+                            Hi => Swap_Bytes (Low_Word)));
 
          when Mid_Big_Endian =>
-            --  BADC: High word first, bytes swapped within words
-            HH := Interfaces.Unsigned_32 (Low_Byte (High_Word));
-            HL := Interfaces.Unsigned_32 (High_Byte (High_Word));
-            LH := Interfaces.Unsigned_32 (Low_Byte (Low_Word));
-            LL := Interfaces.Unsigned_32 (High_Byte (Low_Word));
-            return HH * 16777216 + HL * 65536 + LH * 256 + LL;
+            --  BADC: bytes swapped within each word
+            return To_U32 ((Lo => Swap_Bytes (Low_Word),
+                            Hi => Swap_Bytes (High_Word)));
 
          when Mid_Little_Endian =>
-            --  CDAB: Low word first (word-swapped big-endian)
-            return L * 65536 + H;
+            --  CDAB: words swapped (low word first)
+            return To_U32 ((Lo => High_Word, Hi => Low_Word));
       end case;
    end To_Unsigned_32;
 
@@ -98,35 +127,28 @@ is
       Low_Word  : out Register_Value;
       Order     : Word_Order := Big_Endian)
    is
-      use type Interfaces.Unsigned_32;
-      A, B, C, D : Byte;
+      W : constant Word_Pair := From_U32 (Value);
    begin
-      --  Extract bytes from value (big-endian: A is MSB, D is LSB)
-      A := Byte ((Value / 16777216) mod 256);
-      B := Byte ((Value / 65536) mod 256);
-      C := Byte ((Value / 256) mod 256);
-      D := Byte (Value mod 256);
-
       case Order is
          when Big_Endian =>
             --  ABCD
-            High_Word := Register_Value (A) * 256 + Register_Value (B);
-            Low_Word  := Register_Value (C) * 256 + Register_Value (D);
+            High_Word := W.Hi;
+            Low_Word  := W.Lo;
 
          when Little_Endian =>
             --  DCBA: bytes fully reversed
-            High_Word := Register_Value (D) * 256 + Register_Value (C);
-            Low_Word  := Register_Value (B) * 256 + Register_Value (A);
+            High_Word := Swap_Bytes (W.Lo);
+            Low_Word  := Swap_Bytes (W.Hi);
 
          when Mid_Big_Endian =>
             --  BADC: bytes swapped within each word
-            High_Word := Register_Value (B) * 256 + Register_Value (A);
-            Low_Word  := Register_Value (D) * 256 + Register_Value (C);
+            High_Word := Swap_Bytes (W.Hi);
+            Low_Word  := Swap_Bytes (W.Lo);
 
          when Mid_Little_Endian =>
             --  CDAB: words swapped (low word first)
-            High_Word := Register_Value (C) * 256 + Register_Value (D);
-            Low_Word  := Register_Value (A) * 256 + Register_Value (B);
+            High_Word := W.Lo;
+            Low_Word  := W.Hi;
       end case;
    end From_Unsigned_32;
 
@@ -141,6 +163,76 @@ is
    begin
       return To_Unsigned_32 (Regs (Regs'First), Regs (Regs'First + 1), Order);
    end Registers_To_Unsigned_32;
+
+   -----------------
+   -- To_Float_32 --
+   -----------------
+
+   function To_Float_32
+     (High_Word : Register_Value;
+      Low_Word  : Register_Value;
+      Order     : Word_Order := Big_Endian) return IEEE_Float_32
+   is
+   begin
+      case Order is
+         when Big_Endian =>
+            return To_F32 ((Lo => Low_Word, Hi => High_Word));
+
+         when Little_Endian =>
+            return To_F32 ((Lo => Swap_Bytes (High_Word),
+                            Hi => Swap_Bytes (Low_Word)));
+
+         when Mid_Big_Endian =>
+            return To_F32 ((Lo => Swap_Bytes (Low_Word),
+                            Hi => Swap_Bytes (High_Word)));
+
+         when Mid_Little_Endian =>
+            return To_F32 ((Lo => High_Word, Hi => Low_Word));
+      end case;
+   end To_Float_32;
+
+   -------------------
+   -- From_Float_32 --
+   -------------------
+
+   procedure From_Float_32
+     (Value     : IEEE_Float_32;
+      High_Word : out Register_Value;
+      Low_Word  : out Register_Value;
+      Order     : Word_Order := Big_Endian)
+   is
+      W : constant Word_Pair := From_F32 (Value);
+   begin
+      case Order is
+         when Big_Endian =>
+            High_Word := W.Hi;
+            Low_Word  := W.Lo;
+
+         when Little_Endian =>
+            High_Word := Swap_Bytes (W.Lo);
+            Low_Word  := Swap_Bytes (W.Hi);
+
+         when Mid_Big_Endian =>
+            High_Word := Swap_Bytes (W.Hi);
+            Low_Word  := Swap_Bytes (W.Lo);
+
+         when Mid_Little_Endian =>
+            High_Word := W.Lo;
+            Low_Word  := W.Hi;
+      end case;
+   end From_Float_32;
+
+   ---------------------------
+   -- Registers_To_Float_32 --
+   ---------------------------
+
+   function Registers_To_Float_32
+     (Regs  : Register_Array;
+      Order : Word_Order := Big_Endian) return IEEE_Float_32
+   is
+   begin
+      return To_Float_32 (Regs (Regs'First), Regs (Regs'First + 1), Order);
+   end Registers_To_Float_32;
 
    ------------------
    -- Status_Image --

@@ -7,6 +7,7 @@ with AUnit.Test_Cases; use AUnit.Test_Cases;
 with Interfaces;
 with Ada_Modbus; use Ada_Modbus;
 with Ada_Modbus.Utilities; use Ada_Modbus.Utilities;
+use type Interfaces.IEEE_Float_32;
 
 package body Test_Utilities is
 
@@ -244,6 +245,94 @@ package body Test_Utilities is
       Assert (Low = 16#1234#, "CDAB Low should be 0x1234");
    end Test_From_Unsigned_32_All_Orders;
 
+   --  Test: To_Float_32 with known IEEE 754 values
+   procedure Test_Float32_To (T : in Out Test_Case'Class);
+   procedure Test_Float32_To (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Result : IEEE_Float_32;
+   begin
+      --  1.0 = 0x3F800000 -> High=0x3F80, Low=0x0000
+      Result := To_Float_32 (16#3F80#, 16#0000#, Big_Endian);
+      Assert (Result = 1.0, "Float32 BE: 1.0");
+
+      --  100.0 = 0x42C80000 -> High=0x42C8, Low=0x0000
+      Result := To_Float_32 (16#42C8#, 16#0000#, Big_Endian);
+      Assert (Result = 100.0, "Float32 BE: 100.0");
+
+      --  -1.5 = 0xBFC00000 -> High=0xBFC0, Low=0x0000
+      Result := To_Float_32 (16#BFC0#, 16#0000#, Big_Endian);
+      Assert (Result = -1.5, "Float32 BE: -1.5");
+
+      --  0.0 = 0x00000000
+      Result := To_Float_32 (16#0000#, 16#0000#, Big_Endian);
+      Assert (Result = 0.0, "Float32 BE: 0.0");
+   end Test_Float32_To;
+
+   --  Test: To_Float_32 with all word orders
+   procedure Test_Float32_Word_Orders (T : in Out Test_Case'Class);
+   procedure Test_Float32_Word_Orders (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Result : IEEE_Float_32;
+   begin
+      --  1.0 = 0x3F800000, A=0x3F, B=0x80, C=0x00, D=0x00
+
+      --  Big-Endian (ABCD): High=0x3F80, Low=0x0000
+      Result := To_Float_32 (16#3F80#, 16#0000#, Big_Endian);
+      Assert (Result = 1.0, "Float32 ABCD: 1.0");
+
+      --  Little-Endian (DCBA): High=0x0000, Low=0x803F
+      --  D=0x00, C=0x00, B=0x80, A=0x3F
+      Result := To_Float_32 (16#0000#, 16#803F#, Little_Endian);
+      Assert (Result = 1.0, "Float32 DCBA: 1.0");
+
+      --  Mid-Big-Endian (BADC): High=0x803F, Low=0x0000
+      --  B=0x80, A=0x3F, D=0x00, C=0x00
+      Result := To_Float_32 (16#803F#, 16#0000#, Mid_Big_Endian);
+      Assert (Result = 1.0, "Float32 BADC: 1.0");
+
+      --  Mid-Little-Endian (CDAB): High=0x0000, Low=0x3F80
+      Result := To_Float_32 (16#0000#, 16#3F80#, Mid_Little_Endian);
+      Assert (Result = 1.0, "Float32 CDAB: 1.0");
+   end Test_Float32_Word_Orders;
+
+   --  Test: From_Float_32 and round-trip
+   procedure Test_Float32_Round_Trip (T : in Out Test_Case'Class);
+   procedure Test_Float32_Round_Trip (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      High, Low : Register_Value;
+      Result    : IEEE_Float_32;
+   begin
+      --  Test round-trip for all word orders
+      From_Float_32 (1.0, High, Low, Big_Endian);
+      Assert (High = 16#3F80#, "From_Float32 BE High");
+      Assert (Low = 16#0000#, "From_Float32 BE Low");
+      Result := To_Float_32 (High, Low, Big_Endian);
+      Assert (Result = 1.0, "Float32 ABCD round-trip");
+
+      From_Float_32 (100.0, High, Low, Little_Endian);
+      Result := To_Float_32 (High, Low, Little_Endian);
+      Assert (Result = 100.0, "Float32 DCBA round-trip");
+
+      From_Float_32 (-1.5, High, Low, Mid_Big_Endian);
+      Result := To_Float_32 (High, Low, Mid_Big_Endian);
+      Assert (Result = -1.5, "Float32 BADC round-trip");
+
+      From_Float_32 (0.0, High, Low, Mid_Little_Endian);
+      Result := To_Float_32 (High, Low, Mid_Little_Endian);
+      Assert (Result = 0.0, "Float32 CDAB round-trip");
+   end Test_Float32_Round_Trip;
+
+   --  Test: Registers_To_Float_32
+   procedure Test_Float32_From_Array (T : in Out Test_Case'Class);
+   procedure Test_Float32_From_Array (T : in Out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Regs   : constant Register_Array := [16#42C8#, 16#0000#];
+      Result : IEEE_Float_32;
+   begin
+      Result := Registers_To_Float_32 (Regs, Big_Endian);
+      Assert (Result = 100.0, "Registers_To_Float_32: 100.0");
+   end Test_Float32_From_Array;
+
    --  Test: Status_Image returns non-empty strings
    procedure Test_Status_Image (T : in Out Test_Case'Class);
    procedure Test_Status_Image (T : in Out Test_Case'Class) is
@@ -281,6 +370,10 @@ package body Test_Utilities is
       Registration.Register_Routine (T, Test_32bit_From_Array'Access, "32-bit from Register_Array");
       Registration.Register_Routine (T, Test_32bit_Round_Trip'Access, "32-bit round-trip (all orders)");
       Registration.Register_Routine (T, Test_From_Unsigned_32_All_Orders'Access, "From_Unsigned_32 (all orders)");
+      Registration.Register_Routine (T, Test_Float32_To'Access, "Float32 To_Float_32");
+      Registration.Register_Routine (T, Test_Float32_Word_Orders'Access, "Float32 word orders");
+      Registration.Register_Routine (T, Test_Float32_Round_Trip'Access, "Float32 round-trip");
+      Registration.Register_Routine (T, Test_Float32_From_Array'Access, "Float32 from Register_Array");
       Registration.Register_Routine (T, Test_Status_Image'Access, "Status_Image");
    end Register_Tests;
 
