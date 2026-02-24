@@ -8,10 +8,9 @@
 
 with STM32H7_HAL;
 with TCP_Client;
+with Modbus_TCP_Master;
 with Time_Exports;  --  Ensure time export is elaborated
 pragma Unreferenced (Time_Exports);
-with Ada_Modbus.Protocol;
-with Ada_Modbus.Protocol.TCP;
 with Config;
 
 package body HAL_Stubs is
@@ -213,93 +212,6 @@ package body HAL_Stubs is
          Result     => Result);
    end TCP_Transceive;
 
-   ---------------------------------
-   -- Modbus_TCP_Read_Registers --
-   ---------------------------------
-
-   --  Internal helper for both FC 03 and FC 04
-   procedure Modbus_TCP_Read_Registers
-     (FC            : Function_Code;
-      Unit_Id       : Ada_Modbus.Unit_Id;
-      Start_Address : Register_Address;
-      Quantity      : Register_Count;
-      Values        : out Register_Array;
-      Count         : out Natural;
-      Result        : out Status)
-   is
-      use Ada_Modbus.Protocol;
-      use Ada_Modbus.Protocol.TCP;
-
-      PDU_Buf  : PDU_Buffer;
-      ADU_Buf  : ADU_Buffer;
-      Resp_Buf : ADU_Buffer;
-      PDU_Len, ADU_Len : Natural;
-      Resp_Len, Resp_PDU_Len : Natural;
-      Trans_Id       : constant Transaction_Id := 1;
-      Resp_Trans_Id  : Transaction_Id;
-      Resp_Unit_Id   : Ada_Modbus.Unit_Id;
-      Resp_PDU       : PDU_Buffer;
-   begin
-      Values := [others => 0];
-      Count := 0;
-
-      if not TCP_Client.Is_Connected then
-         Result := Invalid_Request;
-         return;
-      end if;
-
-      --  Encode request
-      Encode_Read_Registers_Request
-        (Buffer        => PDU_Buf,
-         Length        => PDU_Len,
-         FC            => FC,
-         Start_Address => Start_Address,
-         Quantity      => Quantity);
-
-      --  Build TCP frame
-      Build_Frame
-        (ADU           => ADU_Buf,
-         ADU_Length    => ADU_Len,
-         Transaction   => Trans_Id,
-         Unit          => Unit_Id,
-         PDU           => PDU_Buf,
-         PDU_Length    => PDU_Len);
-
-      --  Send/Receive
-      TCP_Transceive
-        (TX_Data    => ADU_Buf (0 .. ADU_Len - 1),
-         RX_Data    => Resp_Buf,
-         RX_Length  => Resp_Len,
-         Timeout_Ms => Config.Modbus_Timeout_Ms,
-         Result     => Result);
-
-      if Result /= Success then
-         return;
-      end if;
-
-      --  Parse response
-      Parse_Frame
-        (ADU           => Resp_Buf,
-         ADU_Length    => Resp_Len,
-         Transaction   => Resp_Trans_Id,
-         Unit          => Resp_Unit_Id,
-         PDU           => Resp_PDU,
-         PDU_Length    => Resp_PDU_Len,
-         Result        => Result);
-
-      if Result /= Success then
-         return;
-      end if;
-
-      --  Decode registers
-      Decode_Read_Registers_Response
-        (Buffer   => Resp_PDU,
-         Length   => Resp_PDU_Len,
-         Values   => Values,
-         Count    => Count,
-         Response => Result);
-   end Modbus_TCP_Read_Registers;
-
    --------------------------------------
    -- Modbus_TCP_Read_Holding_Registers --
    --------------------------------------
@@ -313,13 +225,13 @@ package body HAL_Stubs is
       Result        : out Status)
    is
    begin
-      Modbus_TCP_Read_Registers
-        (FC            => FC_Read_Holding_Registers,
-         Unit_Id       => Unit_Id,
+      Modbus_TCP_Master.Read_Holding_Registers
+        (Unit          => Unit_Id,
          Start_Address => Start_Address,
          Quantity      => Quantity,
          Values        => Values,
          Count         => Count,
+         Timeout_Ms    => Unsigned_32 (Config.Modbus_Timeout_Ms),
          Result        => Result);
    end Modbus_TCP_Read_Holding_Registers;
 
@@ -336,13 +248,13 @@ package body HAL_Stubs is
       Result        : out Status)
    is
    begin
-      Modbus_TCP_Read_Registers
-        (FC            => FC_Read_Input_Registers,
-         Unit_Id       => Unit_Id,
+      Modbus_TCP_Master.Read_Input_Registers
+        (Unit          => Unit_Id,
          Start_Address => Start_Address,
          Quantity      => Quantity,
          Values        => Values,
          Count         => Count,
+         Timeout_Ms    => Unsigned_32 (Config.Modbus_Timeout_Ms),
          Result        => Result);
    end Modbus_TCP_Read_Input_Registers;
 
