@@ -39,6 +39,9 @@ begin
    --  Initialize USART3 for serial console (ST-Link VCP)
    STM32H7_HAL.USART3_Init (115_200);
 
+   --  Register serial output callback for UART console
+   UART_Console.Set_Output (STM32H7_HAL.USART3_Send_Byte'Access);
+
    --  Register exception handler (red LED + UART output)
    Last_Chance_Handler.Set_On_Exception (Error_LEDs.On_Exception'Access);
    Last_Chance_Handler.Set_Output (STM32H7_HAL.USART3_Send_Byte'Access);

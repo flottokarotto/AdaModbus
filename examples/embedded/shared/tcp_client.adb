@@ -5,9 +5,12 @@
 with System;
 with Interfaces.C; use type Interfaces.C.int;
 with LwIP_Bindings; use LwIP_Bindings;
-with STM32H7_HAL;
 
 package body TCP_Client is
+
+   --  Board-independent tick source (provided by each board's time_exports.adb)
+   function Get_Tick_Ms return Unsigned_32
+     with Import, Convention => C, External_Name => "ada_get_tick_ms";
 
    --  Internal state
    Current_State : Connection_State := Disconnected;
@@ -223,7 +226,7 @@ package body TCP_Client is
    is
       IP : aliased IP4_Addr_T := (Addr => Remote_IP);
       Err : Err_T;
-      Start_Time : constant Unsigned_32 := STM32H7_HAL.Get_Tick;
+      Start_Time : constant Unsigned_32 := Get_Tick_Ms;
    begin
       --  Clean up any previous connection
       Cleanup_PCB;
@@ -261,7 +264,7 @@ package body TCP_Client is
       while Current_State = Connecting loop
          Poll;
 
-         if STM32H7_HAL.Get_Tick - Start_Time > Timeout_Ms then
+         if Get_Tick_Ms - Start_Time > Timeout_Ms then
             Cleanup_PCB;
             Current_State := Disconnected;
             Result := Timeout;
@@ -357,7 +360,7 @@ package body TCP_Client is
       Timeout_Ms : Unsigned_32;
       Result     : out Status)
    is
-      Start_Time : constant Unsigned_32 := STM32H7_HAL.Get_Tick;
+      Start_Time : constant Unsigned_32 := Get_Tick_Ms;
    begin
       Data := [others => 0];
       Length := 0;
@@ -379,7 +382,7 @@ package body TCP_Client is
             return;
          end if;
 
-         if STM32H7_HAL.Get_Tick - Start_Time > Timeout_Ms then
+         if Get_Tick_Ms - Start_Time > Timeout_Ms then
             --  No response within timeout — tear down the connection.
             --  The remote is likely gone, and keeping the PCB alive would
             --  just cause subsequent Send calls to fail with Buffer_Too_Small

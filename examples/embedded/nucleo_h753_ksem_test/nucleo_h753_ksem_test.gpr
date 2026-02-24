@@ -42,6 +42,7 @@ project Nucleo_H753_KSEM_Test is
      ("src",
       "src/svd",
       "../shared",
+      "../shared/lwip",
       "../../../src/core",
       "../../../src/energy",
       "lwip_port",
@@ -53,8 +54,7 @@ project Nucleo_H753_KSEM_Test is
       "lwip/src/include",
       "lwip/src/include/lwip",
       "lwip/src/include/netif",
-      "lwip/src/include/lwip/priv",
-      "lwip_port/arch");
+      "lwip/src/include/lwip/priv");
 
    for Object_Dir use "obj/" & Board & "/" & Build_Mode;
    for Exec_Dir use "bin";
@@ -103,6 +103,7 @@ project Nucleo_H753_KSEM_Test is
          "-DLWIP_PROVIDE_ERRNO",
          "-I" & Project'Project_Dir & "lwip_port",
          "-I" & Project'Project_Dir & "lwip_port/arch",
+         "-I" & Project'Project_Dir & "../shared/lwip",
          "-I" & Project'Project_Dir & "lwip/src/include",
          "-I" & CMSIS_Core,
          "-I" & CMSIS_Device,

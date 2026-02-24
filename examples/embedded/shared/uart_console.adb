@@ -1,8 +1,17 @@
---  UART_Console - Implementation via USART3
-
-with STM32H7_HAL;
+--  UART_Console - Implementation via configurable callback
 
 package body UART_Console is
+
+   Output : Put_Byte_Callback := null;
+
+   ----------------
+   -- Set_Output --
+   ----------------
+
+   procedure Set_Output (Callback : Put_Byte_Callback) is
+   begin
+      Output := Callback;
+   end Set_Output;
 
    ---------
    -- Put --
@@ -10,9 +19,11 @@ package body UART_Console is
 
    procedure Put (Msg : String) is
    begin
-      for I in Msg'Range loop
-         STM32H7_HAL.USART3_Send_Byte (Character'Pos (Msg (I)));
-      end loop;
+      if Output /= null then
+         for I in Msg'Range loop
+            Output (Character'Pos (Msg (I)));
+         end loop;
+      end if;
    end Put;
 
    --------------
@@ -21,9 +32,11 @@ package body UART_Console is
 
    procedure Put_Line (Msg : String) is
    begin
-      Put (Msg);
-      STM32H7_HAL.USART3_Send_Byte (16#0D#);  -- CR
-      STM32H7_HAL.USART3_Send_Byte (16#0A#);  -- LF
+      if Output /= null then
+         Put (Msg);
+         Output (16#0D#);  -- CR
+         Output (16#0A#);  -- LF
+      end if;
    end Put_Line;
 
    -------------

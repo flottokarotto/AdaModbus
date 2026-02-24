@@ -2,7 +2,7 @@
 --  Copyright (c) 2026 Florian Fischer
 --  SPDX-License-Identifier: MIT
 --
---  Low-level bindings to LwIP for STM32H7.
+--  Low-level bindings to LwIP for ARM Cortex-M.
 --  Uses raw API (callback-based) for minimal footprint.
 
 with System;

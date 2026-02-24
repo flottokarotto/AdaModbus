@@ -1,5 +1,5 @@
 /**
- * cc.h - Compiler/Platform abstraction for LwIP on ARM Cortex-M7
+ * cc.h - Compiler/Platform abstraction for LwIP on ARM Cortex-M
  * Copyright (c) 2026 Florian Fischer
  * SPDX-License-Identifier: MIT
  *
@@ -40,7 +40,7 @@ typedef uintptr_t   mem_ptr_t;
 #define PACK_STRUCT_BEGIN
 #define PACK_STRUCT_END
 
-/* Byte order - STM32 is little endian */
+/* Byte order - ARM Cortex-M is little endian */
 #ifndef BYTE_ORDER
 #define BYTE_ORDER LITTLE_ENDIAN
 #endif
