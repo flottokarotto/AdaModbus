@@ -60,4 +60,32 @@ is
         Utilities.Big_Endian) return Map_Registers
      with Pre => (for all I of Pairs => I + 1 <= Natural (Register_Size) - 1);
 
+   --  Field-size based conversion: describe your record layout as a
+   --  sequence of 16-bit and 32-bit fields. Record_IO computes the
+   --  register indices for word order adjustment automatically.
+   --
+   --  Example for a record with 3x int16 + 2x uint32 + 1x int16:
+   --    Fields => (Bits_16, Bits_16, Bits_16, Bits_32, Bits_32, Bits_16)
+   --    This maps to 3 + 2*2 + 1 = 8 registers total.
+
+   type Field_Size is (Bits_16, Bits_32);
+   type Field_Sizes is array (Positive range <>) of Field_Size;
+
+   --  Compute total register count for a field layout
+   function Register_Count_Of (Fields : Field_Sizes) return Natural;
+
+   function From_Registers
+     (Regs   : Map_Registers;
+      Fields : Field_Sizes;
+      Order  : Utilities.Word_Order :=
+        Utilities.Big_Endian) return Register_Map
+     with Pre => Register_Count_Of (Fields) = Natural (Register_Size);
+
+   function To_Registers
+     (Map    : Register_Map;
+      Fields : Field_Sizes;
+      Order  : Utilities.Word_Order :=
+        Utilities.Big_Endian) return Map_Registers
+     with Pre => Register_Count_Of (Fields) = Natural (Register_Size);
+
 end Ada_Modbus.Record_IO;

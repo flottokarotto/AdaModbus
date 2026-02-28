@@ -110,4 +110,92 @@ is
       return Tmp;
    end To_Registers;
 
+   ------------------------
+   -- Register_Count_Of --
+   ------------------------
+
+   function Register_Count_Of (Fields : Field_Sizes) return Natural is
+      Count : Natural := 0;
+   begin
+      for F of Fields loop
+         case F is
+            when Bits_16 => Count := Count + 1;
+            when Bits_32 => Count := Count + 2;
+         end case;
+      end loop;
+      return Count;
+   end Register_Count_Of;
+
+   -------------------------------------------
+   -- From_Registers (with field sizes)     --
+   -------------------------------------------
+
+   function From_Registers
+     (Regs   : Map_Registers;
+      Fields : Field_Sizes;
+      Order  : Utilities.Word_Order :=
+        Utilities.Big_Endian) return Register_Map
+   is
+      Tmp : Map_Registers := Regs;
+      Idx : Natural := 0;
+   begin
+      for F of Fields loop
+         case F is
+            when Bits_16 =>
+               Idx := Idx + 1;
+            when Bits_32 =>
+               declare
+                  Native : constant Interfaces.Unsigned_32 :=
+                    Utilities.To_Unsigned_32
+                      (High_Word => Tmp (Idx),
+                       Low_Word  => Tmp (Idx + 1),
+                       Order     => Order);
+                  Pair : constant Reg_Pair := To_Pair (Native);
+               begin
+                  Tmp (Idx)     := Pair (0);
+                  Tmp (Idx + 1) := Pair (1);
+               end;
+               Idx := Idx + 2;
+         end case;
+      end loop;
+      return To_Map (Tmp);
+   end From_Registers;
+
+   ----------------------------------------
+   -- To_Registers (with field sizes)    --
+   ----------------------------------------
+
+   function To_Registers
+     (Map    : Register_Map;
+      Fields : Field_Sizes;
+      Order  : Utilities.Word_Order :=
+        Utilities.Big_Endian) return Map_Registers
+   is
+      Tmp : Map_Registers := To_Regs (Map);
+      Idx : Natural := 0;
+   begin
+      for F of Fields loop
+         case F is
+            when Bits_16 =>
+               Idx := Idx + 1;
+            when Bits_32 =>
+               declare
+                  Native : constant Interfaces.Unsigned_32 :=
+                    From_Pair ([Tmp (Idx), Tmp (Idx + 1)]);
+                  High_Word, Low_Word : Register_Value;
+               begin
+                  Utilities.From_Unsigned_32
+                    (Value     => Native,
+                     High_Word => High_Word,
+                     Low_Word  => Low_Word,
+                     Order     => Order);
+                  Tmp (Idx)     := High_Word;
+                  Tmp (Idx + 1) := Low_Word;
+               end;
+               Idx := Idx + 2;
+         end case;
+      end loop;
+      return Tmp;
+   end To_Registers;
+
 end Ada_Modbus.Record_IO;

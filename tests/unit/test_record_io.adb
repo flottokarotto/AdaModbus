@@ -274,6 +274,89 @@ package body Test_Record_IO is
               IEEE_Float_32'Image (Data.Value));
    end Test_Float32_Mid_Little_Endian;
 
+   --  Test: Field_Sizes From_Registers with Big_Endian
+   --  Same as Test_Mixed_Float_Register but using Field_Sizes API
+   procedure Test_Field_Sizes_From (T : in out Test_Case'Class);
+   procedure Test_Field_Sizes_From (T : in out Test_Case'Class) is
+      pragma Unreferenced (T);
+      use Mixed_IO;
+      Regs : constant Mixed_IO.Map_Registers :=
+        [0 => 16#4248#, 1 => 16#0000#,
+         2 => 16#42C8#, 3 => 16#0000#,
+         4 => 16#ABCD#];
+      Data : Mixed_Reg;
+      Layout : constant Field_Sizes := [Bits_32, Bits_32, Bits_16];
+   begin
+      Data := Mixed_IO.From_Registers (Regs, Layout, Big_Endian);
+      Assert (Data.Temperature = 50.0,
+              "Temperature should be 50.0, got " &
+              IEEE_Float_32'Image (Data.Temperature));
+      Assert (Data.Pressure = 100.0,
+              "Pressure should be 100.0, got " &
+              IEEE_Float_32'Image (Data.Pressure));
+      Assert (Data.Status = 16#ABCD#,
+              "Status should be 16#ABCD#, got " &
+              Register_Value'Image (Data.Status));
+   end Test_Field_Sizes_From;
+
+   --  Test: Field_Sizes To_Registers round-trip
+   procedure Test_Field_Sizes_Round_Trip (T : in out Test_Case'Class);
+   procedure Test_Field_Sizes_Round_Trip (T : in out Test_Case'Class) is
+      pragma Unreferenced (T);
+      use Mixed_IO;
+      Original : constant Mixed_Reg :=
+        (Temperature => 50.0, Pressure => 100.0, Status => 16#1234#);
+      Layout : constant Field_Sizes := [Bits_32, Bits_32, Bits_16];
+      Regs   : Mixed_IO.Map_Registers;
+      Result : Mixed_Reg;
+   begin
+      Regs := Mixed_IO.To_Registers (Original, Layout, Big_Endian);
+      --  Verify wire format: 50.0 = 0x42480000
+      Assert (Regs (0) = 16#4248#, "Reg 0 should be high word of 50.0");
+      Assert (Regs (1) = 16#0000#, "Reg 1 should be low word of 50.0");
+
+      Result := Mixed_IO.From_Registers (Regs, Layout, Big_Endian);
+      Assert (Result.Temperature = Original.Temperature,
+              "Temperature mismatch after round-trip");
+      Assert (Result.Pressure = Original.Pressure,
+              "Pressure mismatch after round-trip");
+      Assert (Result.Status = Original.Status,
+              "Status mismatch after round-trip");
+   end Test_Field_Sizes_Round_Trip;
+
+   --  Test: Field_Sizes with Mid_Little_Endian (CDAB)
+   procedure Test_Field_Sizes_CDAB (T : in out Test_Case'Class);
+   procedure Test_Field_Sizes_CDAB (T : in out Test_Case'Class) is
+      pragma Unreferenced (T);
+      use Float_IO;
+      --  50.0 = 0x42480000, CDAB: Low word first => [0x0000, 0x4248]
+      Regs : constant Float_IO.Map_Registers :=
+        [0 => 16#0000#, 1 => 16#4248#];
+      Layout : constant Field_Sizes := [1 => Bits_32];
+      Data : Float_Reg;
+   begin
+      Data := Float_IO.From_Registers (Regs, Layout, Mid_Little_Endian);
+      Assert (Data.Value = 50.0,
+              "Float (CDAB) should be 50.0, got " &
+              IEEE_Float_32'Image (Data.Value));
+   end Test_Field_Sizes_CDAB;
+
+   --  Test: Register_Count_Of
+   procedure Test_Register_Count_Of (T : in out Test_Case'Class);
+   procedure Test_Register_Count_Of (T : in out Test_Case'Class) is
+      pragma Unreferenced (T);
+      use Mixed_IO;
+   begin
+      Assert (Register_Count_Of ([1 => Bits_16]) = 1,
+              "Single Bits_16 = 1 register");
+      Assert (Register_Count_Of ([1 => Bits_32]) = 2,
+              "Single Bits_32 = 2 registers");
+      Assert (Register_Count_Of ([Bits_32, Bits_32, Bits_16]) = 5,
+              "2x Bits_32 + 1x Bits_16 = 5 registers");
+      Assert (Register_Count_Of ([Bits_16, Bits_16, Bits_16]) = 3,
+              "3x Bits_16 = 3 registers");
+   end Test_Register_Count_Of;
+
    --  Test: To_Registers with Mid_Little_Endian
    procedure Test_Float32_To_Mid_Little_Endian (T : in out Test_Case'Class);
    procedure Test_Float32_To_Mid_Little_Endian (T : in out Test_Case'Class) is
@@ -319,6 +402,14 @@ package body Test_Record_IO is
                                      "Float32 Mid_Little_Endian (CDAB)");
       Registration.Register_Routine (T, Test_Float32_To_Mid_Little_Endian'Access,
                                      "Float32 To Mid_Little_Endian (CDAB)");
+      Registration.Register_Routine (T, Test_Field_Sizes_From'Access,
+                                     "Field_Sizes From_Registers");
+      Registration.Register_Routine (T, Test_Field_Sizes_Round_Trip'Access,
+                                     "Field_Sizes round-trip");
+      Registration.Register_Routine (T, Test_Field_Sizes_CDAB'Access,
+                                     "Field_Sizes Mid_Little_Endian (CDAB)");
+      Registration.Register_Routine (T, Test_Register_Count_Of'Access,
+                                     "Register_Count_Of");
    end Register_Tests;
 
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
