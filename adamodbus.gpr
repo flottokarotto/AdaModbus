@@ -119,6 +119,8 @@ project Adamodbus is
             for Switches ("ada_modbus-energy-ksem.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
             for Switches ("ada_modbus-gateway.ads") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
             for Switches ("ada_modbus-gateway.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
+            for Switches ("ada_modbus-record_io.ads") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
+            for Switches ("ada_modbus-record_io.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
       end case;
    end Compiler;
 

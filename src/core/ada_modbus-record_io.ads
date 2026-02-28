@@ -23,7 +23,9 @@ with Ada_Modbus.Utilities;
 
 generic
    type Register_Map is private;
-package Ada_Modbus.Record_IO is
+package Ada_Modbus.Record_IO
+  with SPARK_Mode => On
+is
 
    pragma Compile_Time_Error
      (Register_Map'Size mod 16 /= 0,

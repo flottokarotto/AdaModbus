@@ -5,7 +5,16 @@
 with Ada.Unchecked_Conversion;
 with Interfaces;
 
-package body Ada_Modbus.Record_IO is
+package body Ada_Modbus.Record_IO
+  with SPARK_Mode => On
+is
+
+   --  Unchecked_Conversion instantiations at package level for SPARK
+
+   function To_Map is new Ada.Unchecked_Conversion
+     (Source => Map_Registers, Target => Register_Map);
+   function To_Regs is new Ada.Unchecked_Conversion
+     (Source => Register_Map, Target => Map_Registers);
 
    --  Local types for splitting native 32-bit values into register pairs.
    --  Unchecked_Conversion preserves the native memory layout, so the
@@ -24,10 +33,8 @@ package body Ada_Modbus.Record_IO is
    ------------------
 
    function To_Registers (Map : Register_Map) return Map_Registers is
-      function Convert is new Ada.Unchecked_Conversion
-        (Source => Register_Map, Target => Map_Registers);
    begin
-      return Convert (Map);
+      return To_Regs (Map);
    end To_Registers;
 
    --------------------
@@ -35,10 +42,8 @@ package body Ada_Modbus.Record_IO is
    --------------------
 
    function From_Registers (Regs : Map_Registers) return Register_Map is
-      function Convert is new Ada.Unchecked_Conversion
-        (Source => Map_Registers, Target => Register_Map);
    begin
-      return Convert (Regs);
+      return To_Map (Regs);
    end From_Registers;
 
    -----------------------------------------
@@ -51,8 +56,6 @@ package body Ada_Modbus.Record_IO is
       Order : Utilities.Word_Order :=
         Utilities.Big_Endian) return Register_Map
    is
-      function Convert is new Ada.Unchecked_Conversion
-        (Source => Map_Registers, Target => Register_Map);
       Tmp : Map_Registers := Regs;
    begin
       --  Adjust each 32-bit field from wire word order to native layout
@@ -71,7 +74,7 @@ package body Ada_Modbus.Record_IO is
             Tmp (Idx + 1) := Pair (1);
          end;
       end loop;
-      return Convert (Tmp);
+      return To_Map (Tmp);
    end From_Registers;
 
    --------------------------------------
@@ -84,9 +87,7 @@ package body Ada_Modbus.Record_IO is
       Order : Utilities.Word_Order :=
         Utilities.Big_Endian) return Map_Registers
    is
-      function Convert is new Ada.Unchecked_Conversion
-        (Source => Register_Map, Target => Map_Registers);
-      Tmp : Map_Registers := Convert (Map);
+      Tmp : Map_Registers := To_Regs (Map);
    begin
       --  Adjust each 32-bit field from native layout to wire word order
       for Idx of Pairs loop
