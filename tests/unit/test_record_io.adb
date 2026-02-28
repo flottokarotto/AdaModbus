@@ -6,6 +6,8 @@ with AUnit.Assertions; use AUnit.Assertions;
 with AUnit.Test_Cases; use AUnit.Test_Cases;
 with Ada_Modbus; use Ada_Modbus;
 with Ada_Modbus.Record_IO;
+with Ada_Modbus.Utilities; use Ada_Modbus.Utilities;
+with Interfaces; use type Interfaces.IEEE_Float_32;
 
 package body Test_Record_IO is
 
@@ -153,6 +155,142 @@ package body Test_Record_IO is
       Assert (Data.B = 16#FFFF#, "B should be 16#FFFF#");
    end Test_Max_Values;
 
+   --  ===== Float32 / 32-bit word order tests =====
+
+   --  Record with a single Float32 field (2 registers)
+   type Float_Reg is record
+      Value : IEEE_Float_32;
+   end record with Size => 2 * 16;
+
+   for Float_Reg use record
+      Value at 0 range 0 .. 31;
+   end record;
+
+   package Float_IO is new Ada_Modbus.Record_IO (Float_Reg);
+
+   --  Record with mixed Float32 and Register_Value fields (5 registers)
+   type Mixed_Reg is record
+      Temperature : IEEE_Float_32;   --  Register 0-1
+      Pressure    : IEEE_Float_32;   --  Register 2-3
+      Status      : Register_Value;  --  Register 4
+   end record with Size => 5 * 16;
+
+   for Mixed_Reg use record
+      Temperature at 0 range 0 .. 31;
+      Pressure    at 4 range 0 .. 31;
+      Status      at 8 range 0 .. 15;
+   end record;
+
+   package Mixed_IO is new Ada_Modbus.Record_IO (Mixed_Reg);
+
+   --  Test: Float32 From_Registers with Big_Endian word order
+   --  IEEE 754: 50.0 = 0x42480000 => High=0x4248, Low=0x0000
+   procedure Test_Float32_From_Registers (T : in out Test_Case'Class);
+   procedure Test_Float32_From_Registers (T : in out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Regs : constant Float_IO.Map_Registers :=
+        [0 => 16#4248#, 1 => 16#0000#];
+      Data : Float_Reg;
+   begin
+      Data := Float_IO.From_Registers
+        (Regs, Pairs => [1 => 0], Order => Big_Endian);
+      Assert (Data.Value = 50.0,
+              "Float should be 50.0, got " &
+              IEEE_Float_32'Image (Data.Value));
+   end Test_Float32_From_Registers;
+
+   --  Test: Float32 To_Registers with Big_Endian word order
+   procedure Test_Float32_To_Registers (T : in out Test_Case'Class);
+   procedure Test_Float32_To_Registers (T : in out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Data : constant Float_Reg := (Value => 50.0);
+      Regs : Float_IO.Map_Registers;
+   begin
+      Regs := Float_IO.To_Registers
+        (Data, Pairs => [1 => 0], Order => Big_Endian);
+      Assert (Regs (0) = 16#4248#,
+              "Reg 0 should be 16#4248#, got " &
+              Register_Value'Image (Regs (0)));
+      Assert (Regs (1) = 16#0000#,
+              "Reg 1 should be 16#0000#, got " &
+              Register_Value'Image (Regs (1)));
+   end Test_Float32_To_Registers;
+
+   --  Test: Float32 round-trip preserves value
+   procedure Test_Float32_Round_Trip (T : in out Test_Case'Class);
+   procedure Test_Float32_Round_Trip (T : in out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Original : constant Float_Reg := (Value => -123.456);
+      Regs   : Float_IO.Map_Registers;
+      Result : Float_Reg;
+   begin
+      Regs := Float_IO.To_Registers
+        (Original, Pairs => [1 => 0], Order => Big_Endian);
+      Result := Float_IO.From_Registers
+        (Regs, Pairs => [1 => 0], Order => Big_Endian);
+      Assert (Result.Value = Original.Value,
+              "Round-trip: expected " &
+              IEEE_Float_32'Image (Original.Value) & ", got " &
+              IEEE_Float_32'Image (Result.Value));
+   end Test_Float32_Round_Trip;
+
+   --  Test: Mixed record with Float32 and Register_Value
+   procedure Test_Mixed_Float_Register (T : in out Test_Case'Class);
+   procedure Test_Mixed_Float_Register (T : in out Test_Case'Class) is
+      pragma Unreferenced (T);
+      --  50.0 = 0x42480000, 100.0 = 0x42C80000
+      Regs : constant Mixed_IO.Map_Registers :=
+        [0 => 16#4248#, 1 => 16#0000#,
+         2 => 16#42C8#, 3 => 16#0000#,
+         4 => 16#ABCD#];
+      Data : Mixed_Reg;
+   begin
+      Data := Mixed_IO.From_Registers
+        (Regs, Pairs => [1 => 0, 2 => 2], Order => Big_Endian);
+      Assert (Data.Temperature = 50.0,
+              "Temperature should be 50.0, got " &
+              IEEE_Float_32'Image (Data.Temperature));
+      Assert (Data.Pressure = 100.0,
+              "Pressure should be 100.0, got " &
+              IEEE_Float_32'Image (Data.Pressure));
+      Assert (Data.Status = 16#ABCD#,
+              "Status should be 16#ABCD#, got " &
+              Register_Value'Image (Data.Status));
+   end Test_Mixed_Float_Register;
+
+   --  Test: Mid_Little_Endian (CDAB) word order
+   --  50.0 = 0x42480000 => CDAB: Low word first => [0x0000, 0x4248]
+   procedure Test_Float32_Mid_Little_Endian (T : in out Test_Case'Class);
+   procedure Test_Float32_Mid_Little_Endian (T : in out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Regs : constant Float_IO.Map_Registers :=
+        [0 => 16#0000#, 1 => 16#4248#];
+      Data : Float_Reg;
+   begin
+      Data := Float_IO.From_Registers
+        (Regs, Pairs => [1 => 0], Order => Mid_Little_Endian);
+      Assert (Data.Value = 50.0,
+              "Float (CDAB) should be 50.0, got " &
+              IEEE_Float_32'Image (Data.Value));
+   end Test_Float32_Mid_Little_Endian;
+
+   --  Test: To_Registers with Mid_Little_Endian
+   procedure Test_Float32_To_Mid_Little_Endian (T : in out Test_Case'Class);
+   procedure Test_Float32_To_Mid_Little_Endian (T : in out Test_Case'Class) is
+      pragma Unreferenced (T);
+      Data : constant Float_Reg := (Value => 50.0);
+      Regs : Float_IO.Map_Registers;
+   begin
+      Regs := Float_IO.To_Registers
+        (Data, Pairs => [1 => 0], Order => Mid_Little_Endian);
+      Assert (Regs (0) = 16#0000#,
+              "CDAB Reg 0 should be 16#0000#, got " &
+              Register_Value'Image (Regs (0)));
+      Assert (Regs (1) = 16#4248#,
+              "CDAB Reg 1 should be 16#4248#, got " &
+              Register_Value'Image (Regs (1)));
+   end Test_Float32_To_Mid_Little_Endian;
+
    overriding procedure Register_Tests (T : in out Record_IO_Test_Case) is
    begin
       Registration.Register_Routine (T, Test_Register_Size'Access,
@@ -169,6 +307,18 @@ package body Test_Record_IO is
                                      "Zero values");
       Registration.Register_Routine (T, Test_Max_Values'Access,
                                      "Max values");
+      Registration.Register_Routine (T, Test_Float32_From_Registers'Access,
+                                     "Float32 From_Registers (Big_Endian)");
+      Registration.Register_Routine (T, Test_Float32_To_Registers'Access,
+                                     "Float32 To_Registers (Big_Endian)");
+      Registration.Register_Routine (T, Test_Float32_Round_Trip'Access,
+                                     "Float32 round-trip");
+      Registration.Register_Routine (T, Test_Mixed_Float_Register'Access,
+                                     "Mixed Float32 + Register_Value");
+      Registration.Register_Routine (T, Test_Float32_Mid_Little_Endian'Access,
+                                     "Float32 Mid_Little_Endian (CDAB)");
+      Registration.Register_Routine (T, Test_Float32_To_Mid_Little_Endian'Access,
+                                     "Float32 To Mid_Little_Endian (CDAB)");
    end Register_Tests;
 
    function Suite return AUnit.Test_Suites.Access_Test_Suite is

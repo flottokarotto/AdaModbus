@@ -19,6 +19,8 @@
 --
 --    package Sensor_IO is new Ada_Modbus.Record_IO (Sensor_Data);
 
+with Ada_Modbus.Utilities;
+
 generic
    type Register_Map is private;
 package Ada_Modbus.Record_IO is
@@ -32,7 +34,28 @@ package Ada_Modbus.Record_IO is
 
    subtype Map_Registers is Register_Array (0 .. Natural (Register_Size) - 1);
 
+   --  Simple conversion (16-bit fields only)
    function To_Registers (Map : Register_Map) return Map_Registers;
    function From_Registers (Regs : Map_Registers) return Register_Map;
+
+   --  Register indices of 32-bit fields (each index marks the first
+   --  of two consecutive registers forming a 32-bit value)
+   type Word_Pair_Indices is array (Positive range <>) of Natural;
+
+   --  Convert registers with 32-bit field word order adjustment.
+   --  Pairs specifies register indices of 32-bit fields (Float32/U32).
+   function From_Registers
+     (Regs  : Map_Registers;
+      Pairs : Word_Pair_Indices;
+      Order : Utilities.Word_Order :=
+        Utilities.Big_Endian) return Register_Map
+     with Pre => (for all I of Pairs => I + 1 <= Natural (Register_Size) - 1);
+
+   function To_Registers
+     (Map   : Register_Map;
+      Pairs : Word_Pair_Indices;
+      Order : Utilities.Word_Order :=
+        Utilities.Big_Endian) return Map_Registers
+     with Pre => (for all I of Pairs => I + 1 <= Natural (Register_Size) - 1);
 
 end Ada_Modbus.Record_IO;
