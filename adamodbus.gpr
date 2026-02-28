@@ -53,7 +53,8 @@ project Adamodbus is
       "Ada_Modbus.Energy.Delta_Charger",
       "Ada_Modbus.Energy.Kostal",
       "Ada_Modbus.Energy.KSEM",
-      "Ada_Modbus.Gateway");
+      "Ada_Modbus.Gateway",
+      "Ada_Modbus.Record_IO");
 
    type Build_Mode_Type is ("debug", "release");
    Build_Mode : Build_Mode_Type := external ("ADAMODBUS_BUILD_MODE", "debug");
