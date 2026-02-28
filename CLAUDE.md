@@ -74,7 +74,7 @@ Der Protokoll-Kern ist SPARK-kompatibel für formale Verifikation.
 ┌─────────────────────────────────────────────────┐
 │  C-API, Transport, Master, Slave (Non-SPARK)    │  ← Runtime-Checks aktiv
 ├─────────────────────────────────────────────────┤
-│  Slave_Generic, Slave_Stubs (SPARK)             │  ← Formal Subprograms
+│  Slave_Generic, Slave_Stubs, Record_IO (SPARK)  │  ← Formal Subprograms
 ├─────────────────────────────────────────────────┤
 │  Protocol Core (SPARK)                          │  ← Verifiziert
 │    Protocol, Protocol.RTU/ASCII/TCP             │
@@ -122,6 +122,7 @@ Alle mit `SPARK_Mode => On`:
 | `Ada_Modbus.Energy.Kostal` | Kostal Inverter Profil | ✅ Flow + Proof |
 | `Ada_Modbus.Energy.KSEM` | Kostal Smart Energy Meter | ✅ Flow + Proof |
 | `Ada_Modbus.Gateway` | TCP↔RTU Protokollumsetzung | ✅ Flow + Proof |
+| `Ada_Modbus.Record_IO` | Record↔Register Mapping | ✅ Flow (Generic) |
 
 ### Non-SPARK Packages
 
