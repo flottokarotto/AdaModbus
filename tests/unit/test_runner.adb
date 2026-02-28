@@ -19,6 +19,7 @@ with Test_Async;
 with Test_SunSpec;
 with Test_Delta_Charger;
 with Test_Gateway;
+with Test_Record_IO;
 
 procedure Test_Runner is
 
@@ -51,6 +52,9 @@ procedure Test_Runner is
 
       --  Gateway tests
       S.Add_Test (Test_Gateway.Suite);
+
+      --  Record_IO tests
+      S.Add_Test (Test_Record_IO.Suite);
 
       return S;
    end Suite;
