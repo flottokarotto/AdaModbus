@@ -40,6 +40,9 @@ is
    function To_U32 is new Ada.Unchecked_Conversion (Word_Pair, Interfaces.Unsigned_32);
    function From_U32 is new Ada.Unchecked_Conversion (Interfaces.Unsigned_32, Word_Pair);
    function To_F32 is new Ada.Unchecked_Conversion (Word_Pair, IEEE_Float_32);
+   pragma Annotate (GNATprove, Intentional,
+      "type is unsuitable as a target for unchecked conversion",
+      "Modbus register values represent IEEE 754 wire data");
    function From_F32 is new Ada.Unchecked_Conversion (IEEE_Float_32, Word_Pair);
 
    --  Endian-aware accessors: on LE B0/W0 is low, on BE B0/W0 is high.
