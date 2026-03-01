@@ -9,77 +9,83 @@ package body Ada_Modbus.Scaled_IO
   with SPARK_Mode => On
 is
 
-   --  Float array matching the record layout
-   type Float_Fields is array (1 .. Field_Count) of Float
-     with Pack;
-
-   function To_Record is new Ada.Unchecked_Conversion
-     (Source => Float_Fields, Target => Scaled_Record);
-
-   ----------------------
-   -- From_Registers  --
-   ----------------------
-
-   function From_Registers
-     (Regs   : Register_Array;
-      Fields : Field_Descriptors;
-      Order  : Utilities.Word_Order :=
-        Utilities.Big_Endian) return Scaled_Record
+   package body Map
+     with SPARK_Mode => On
    is
-      use Scaling;
-      Result : Float_Fields;
-   begin
-      for I in Fields'Range loop
-         declare
-            F   : Field_Descriptor renames Fields (I);
-            Reg : constant Natural := F.Reg;
-         begin
-            case F.Kind is
-               when Raw_U16 =>
-                  Result (I) := Float (Regs (Reg));
 
-               when Raw_S16 =>
-                  Result (I) := Float (To_Signed (Regs (Reg)));
+      --  Float array matching the record layout
+      type Float_Fields is array (1 .. Field_Count) of Float
+        with Pack;
 
-               when Raw_U32 =>
-                  Result (I) := Float
-                    (Utilities.To_Unsigned_32
-                       (Regs (Reg), Regs (Reg + 1), Order));
+      function To_Record is new Ada.Unchecked_Conversion
+        (Source => Float_Fields, Target => Scaled_Record);
 
-               when SF_U16 =>
-                  Result (I) := Apply
-                    (Regs (Reg), To_SF (Regs (F.SF_Reg)));
+      ----------------------
+      -- From_Registers  --
+      ----------------------
 
-               when SF_S16 =>
-                  Result (I) := Apply_Signed
-                    (Regs (Reg), To_SF (Regs (F.SF_Reg)));
+      function From_Registers
+        (Regs  : Register_Array;
+         Order : Utilities.Word_Order :=
+           Utilities.Big_Endian) return Scaled_Record
+      is
+         use Scaling;
+         Result : Float_Fields;
+      begin
+         for I in Fields'Range loop
+            declare
+               F   : Field_Descriptor renames Fields (I);
+               Reg : constant Natural := F.Reg;
+               Idx : constant Positive := I - Fields'First + 1;
+            begin
+               case F.Kind is
+                  when Raw_U16 =>
+                     Result (Idx) := Float (Regs (Reg));
 
-               when SF_U32 =>
-                  Result (I) := Apply_U32
-                    (Regs (Reg), Regs (Reg + 1),
-                     To_SF (Regs (F.SF_Reg)), Order);
+                  when Raw_S16 =>
+                     Result (Idx) := Float (To_Signed (Regs (Reg)));
 
-               when Factor_U16 =>
-                  Result (I) := Scale (Regs (Reg), F.Factor);
+                  when Raw_U32 =>
+                     Result (Idx) := Float
+                       (Utilities.To_Unsigned_32
+                          (Regs (Reg), Regs (Reg + 1), Order));
 
-               when Factor_S16 =>
-                  Result (I) := Scale_Signed (Regs (Reg), F.Factor);
+                  when SF_U16 =>
+                     Result (Idx) := Apply
+                       (Regs (Reg), To_SF (Regs (F.SF_Reg)));
 
-               when Factor_U32 =>
-                  Result (I) := Scale_U32
-                    (Regs (Reg), Regs (Reg + 1), F.Factor, Order);
+                  when SF_S16 =>
+                     Result (Idx) := Apply_Signed
+                       (Regs (Reg), To_SF (Regs (F.SF_Reg)));
 
-               when Affine_U16 =>
-                  Result (I) := Affine (Regs (Reg), F.Factor, F.Offset);
+                  when SF_U32 =>
+                     Result (Idx) := Apply_U32
+                       (Regs (Reg), Regs (Reg + 1),
+                        To_SF (Regs (F.SF_Reg)), Order);
 
-               when Affine_S16 =>
-                  Result (I) := Affine_Signed
-                    (Regs (Reg), F.Factor, F.Offset);
-            end case;
-         end;
-      end loop;
+                  when Factor_U16 =>
+                     Result (Idx) := Scale (Regs (Reg), F.Factor);
 
-      return To_Record (Result);
-   end From_Registers;
+                  when Factor_S16 =>
+                     Result (Idx) := Scale_Signed (Regs (Reg), F.Factor);
+
+                  when Factor_U32 =>
+                     Result (Idx) := Scale_U32
+                       (Regs (Reg), Regs (Reg + 1), F.Factor, Order);
+
+                  when Affine_U16 =>
+                     Result (Idx) := Affine (Regs (Reg), F.Factor, F.Offset);
+
+                  when Affine_S16 =>
+                     Result (Idx) := Affine_Signed
+                       (Regs (Reg), F.Factor, F.Offset);
+               end case;
+            end;
+         end loop;
+
+         return To_Record (Result);
+      end From_Registers;
+
+   end Map;
 
 end Ada_Modbus.Scaled_IO;

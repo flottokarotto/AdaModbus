@@ -1008,6 +1008,8 @@ Energy := Apply_U32 (Hi_Reg, Lo_Reg, SF => 0);
 Deklaratives One-Shot-Mapping: Register-Array → Float-Record in einem Aufruf.
 
 ```ada
+with Ada_Modbus.Scaled_IO; use Ada_Modbus.Scaled_IO;
+
 --  1. Float-Record definieren (nur die gewünschten Felder)
 type Meter_Data is record
    Total_Power : Float;  --  W
@@ -1015,18 +1017,18 @@ type Meter_Data is record
    Frequency   : Float;  --  Hz
 end record;
 
---  2. Generisches Package instanziieren
-package Meter_IO is new Ada_Modbus.Scaled_IO (Meter_Data);
-use Meter_IO;
-
---  3. Feld-Deskriptoren: Register-Index + Skalierungsart
-Fields : constant Field_Descriptors :=
+--  2. Feld-Deskriptoren: Register-Index + Skalierungsart
+Meter_Fields : constant Field_Descriptor_Array :=
   [(Reg => 16, Kind => SF_S16, SF_Reg => 20, others => <>),  --  Power
    (Reg =>  5, Kind => SF_U16, SF_Reg => 13, others => <>),  --  Voltage
    (Reg => 14, Kind => SF_U16, SF_Reg => 15, others => <>)]; --  Frequency
 
+--  3. Generisches Package instanziieren (Fields gebunden)
+package Meter_IO is new Ada_Modbus.Scaled_IO.Map
+  (Meter_Data, Meter_Fields);
+
 --  4. One-Liner: Register → physikalische Werte
-Data : Meter_Data := Meter_IO.From_Registers (Raw_Regs, Fields);
+Data : Meter_Data := Meter_IO.From_Registers (Raw_Regs);
 ```
 
 **Scale_Kind Optionen:**

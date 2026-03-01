@@ -80,10 +80,9 @@ procedure KSEM_Scaled_IO is
    --    52:    Energy_SF
    ---------------------------------------------------------------------------
 
-   package Meter_IO is new Ada_Modbus.Scaled_IO (Meter_Data);
-   use Meter_IO;
+   use Ada_Modbus.Scaled_IO;
 
-   Meter_Fields : constant Field_Descriptors :=
+   Meter_Fields : constant Field_Descriptor_Array :=
      [--  Power: signed * 10^SF, SF at register 20
       (Reg => 16, Kind => SF_S16, SF_Reg => 20, others => <>),  --  Total_Power
       (Reg => 17, Kind => SF_S16, SF_Reg => 20, others => <>),  --  Phase_A
@@ -106,6 +105,9 @@ procedure KSEM_Scaled_IO is
       --  Energy: unsigned 32-bit * 10^SF, SF at register 52
       (Reg => 36, Kind => SF_U32, SF_Reg => 52, others => <>),  --  Wh Export
       (Reg => 44, Kind => SF_U32, SF_Reg => 52, others => <>)]; --  Wh Import
+
+   package Meter_IO is new Ada_Modbus.Scaled_IO.Map
+     (Meter_Data, Meter_Fields);
 
    ---------------------------------------------------------------------------
    --  Transport setup
@@ -322,7 +324,7 @@ begin
                        (Unit, M_Addr + 2, Model_203_Regs, Raw_Regs)
                   then
                      --  One-liner: registers -> physical Float values
-                     Print_Meter (Meter_IO.From_Registers (Raw_Regs, Meter_Fields));
+                     Print_Meter (Meter_IO.From_Registers (Raw_Regs));
                      Found := True;
                   end if;
                end;
