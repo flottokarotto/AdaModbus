@@ -11,22 +11,8 @@ is
    ---------------------
 
    function To_Scale_Factor (Value : Register_Value) return Scale_Factor is
-      Raw : Integer;
    begin
-      --  Convert unsigned to signed (two's complement)
-      if Value > 32767 then
-         Raw := Integer (Value) - 65536;
-      else
-         Raw := Integer (Value);
-      end if;
-
-      --  Clamp to valid range
-      if Raw in -10 .. 10 then
-         return Scale_Factor (Raw);
-      else
-         --  Invalid SF, use 0 (no scaling)
-         return 0;
-      end if;
+      return Scaling.To_SF (Value);
    end To_Scale_Factor;
 
    ------------------
@@ -35,11 +21,7 @@ is
 
    function To_Signed_16 (Value : Register_Value) return Integer is
    begin
-      if Value > 32767 then
-         return Integer (Value) - 65536;
-      else
-         return Integer (Value);
-      end if;
+      return Scaling.To_Signed (Value);
    end To_Signed_16;
 
    --------------------
@@ -48,9 +30,7 @@ is
 
    function Is_Implemented (Value : Register_Value) return Boolean is
    begin
-      --  Check common "not implemented" markers for uint16
-      return Value /= Not_Implemented and then
-             Value /= 16#7FFF#;  --  Some devices use 0x7FFF
+      return Scaling.Valid_U16 (Value);
    end Is_Implemented;
 
    --------------------------
@@ -59,9 +39,7 @@ is
 
    function Is_Implemented_Int16 (Value : Register_Value) return Boolean is
    begin
-      --  Check "not implemented" markers for int16
-      return Value /= Not_Implemented_Int16 and then
-             Value /= Not_Implemented;
+      return Scaling.Valid_S16 (Value);
    end Is_Implemented_Int16;
 
    -----------------
@@ -71,7 +49,7 @@ is
    function Apply_Scale (Value : Register_Value; SF : Scale_Factor) return Float
    is
    begin
-      return Float (Value) * Scale_Multipliers (SF);
+      return Scaling.Apply (Value, SF);
    end Apply_Scale;
 
    ------------------------
@@ -81,22 +59,8 @@ is
    function Apply_Scale_Signed
      (Value : Register_Value; SF : Scale_Factor) return Float
    is
-      Signed_Value : Integer;
-      Result       : Float;
    begin
-      --  Convert unsigned 16-bit to signed (two's complement)
-      if Value > 32767 then
-         Signed_Value := Integer (Value) - 65536;
-      else
-         Signed_Value := Integer (Value);
-      end if;
-      --  Signed_Value is bounded to -32768..32767, Scale_Multipliers to 1E-10..1E10
-      --  Maximum result: 32767 * 1E10 = 3.2767E14 < Float'Last (3.4E38)
-      Result := Float (Signed_Value) * Scale_Multipliers (SF);
-      pragma Annotate (GNATprove, Intentional,
-                       "float overflow check might fail",
-                       "Signed_Value bounded to int16 range, result < Float'Last");
-      return Result;
+      return Scaling.Apply_Signed (Value, SF);
    end Apply_Scale_Signed;
 
    -------------------

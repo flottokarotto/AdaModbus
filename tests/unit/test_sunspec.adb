@@ -7,6 +7,7 @@ with AUnit.Test_Cases; use AUnit.Test_Cases;
 with Ada_Modbus; use Ada_Modbus;
 with Ada_Modbus.Protocol; use Ada_Modbus.Protocol;
 with Ada_Modbus.Energy.SunSpec; use Ada_Modbus.Energy.SunSpec;
+with Ada_Modbus.Scaling; use type Ada_Modbus.Scaling.Scale_Factor;
 with Ada_Modbus.Energy.SunSpec.Inverter; use Ada_Modbus.Energy.SunSpec.Inverter;
 with Ada_Modbus.Energy.SunSpec.Common; use Ada_Modbus.Energy.SunSpec.Common;
 with Ada_Modbus.Energy.SunSpec.Meter; use Ada_Modbus.Energy.SunSpec.Meter;

@@ -116,26 +116,15 @@ is
          end if;
       end Scaled;
 
-      --  Decode 32-bit energy value
+      --  Decode 32-bit energy value using Scaling.Apply_U32 (proven)
       function Decode_Energy (Reg_Offset : Natural) return Float is
-         use type Interfaces.Unsigned_32;
-         Hi  : constant Register_Value := Regs (Base + Reg_Offset - 2);
-         Lo  : constant Register_Value := Regs (Base + Reg_Offset - 1);
-         Val : Interfaces.Unsigned_32;
-         Result : Float;
+         Hi : constant Register_Value := Regs (Base + Reg_Offset - 2);
+         Lo : constant Register_Value := Regs (Base + Reg_Offset - 1);
       begin
          if Hi = Not_Implemented and then Lo = Not_Implemented then
             return 0.0;
          end if;
-         Val := Interfaces.Shift_Left (Interfaces.Unsigned_32 (Hi), 16) or
-                Interfaces.Unsigned_32 (Lo);
-         --  Val is bounded to uint32, Scale_Multipliers to 1E-10..1E10
-         --  Maximum result: 4.29E9 * 1E10 = 4.29E19 < Float'Last (3.4E38)
-         Result := Float (Val) * Scale_Multipliers (SF.Wh_SF);
-         pragma Annotate (GNATprove, Intentional,
-                          "float overflow check might fail",
-                          "Val bounded to uint32 range, result < Float'Last");
-         return Result;
+         return Scaling.Apply_U32 (Hi, Lo, SF.Wh_SF);
       end Decode_Energy;
 
    begin

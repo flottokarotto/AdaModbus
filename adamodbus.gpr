@@ -54,7 +54,9 @@ project Adamodbus is
       "Ada_Modbus.Energy.Kostal",
       "Ada_Modbus.Energy.KSEM",
       "Ada_Modbus.Gateway",
-      "Ada_Modbus.Record_IO");
+      "Ada_Modbus.Record_IO",
+      "Ada_Modbus.Scaling",
+      "Ada_Modbus.Scaled_IO");
 
    type Build_Mode_Type is ("debug", "release");
    Build_Mode : Build_Mode_Type := external ("ADAMODBUS_BUILD_MODE", "debug");
@@ -121,6 +123,10 @@ project Adamodbus is
             for Switches ("ada_modbus-gateway.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
             for Switches ("ada_modbus-record_io.ads") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
             for Switches ("ada_modbus-record_io.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
+            for Switches ("ada_modbus-scaling.ads") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
+            for Switches ("ada_modbus-scaling.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
+            for Switches ("ada_modbus-scaled_io.ads") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
+            for Switches ("ada_modbus-scaled_io.adb") use Common_Switches & ("-O2", "-gnatn", "-gnatp");
       end case;
    end Compiler;
 
