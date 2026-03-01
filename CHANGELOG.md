@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-03-01
+
+### Breaking Changes
+- `Ada_Modbus.Scaled_IO` API redesigned: package is no longer generic itself.
+  Types (`Scale_Kind`, `Field_Descriptor`, `Field_Descriptor_Array`) are now
+  in the outer non-generic package. Use nested generic `Ada_Modbus.Scaled_IO.Map`
+  with both `Scaled_Record` and `Fields` as generic parameters. `From_Registers`
+  no longer takes a `Fields` argument — descriptors are bound at instantiation.
+
+### Migration
+```ada
+--  Before (v1.x):
+package Sensor_IO is new Ada_Modbus.Scaled_IO (Sensor_Data);
+Fields : constant Sensor_IO.Field_Descriptors := [...];
+Data := Sensor_IO.From_Registers (Regs, Fields);
+
+--  After (v2.0):
+use Ada_Modbus.Scaled_IO;
+Sensor_Fields : constant Field_Descriptor_Array := [...];
+package Sensor_IO is new Ada_Modbus.Scaled_IO.Map
+  (Sensor_Data, Sensor_Fields);
+Data := Sensor_IO.From_Registers (Regs);
+```
+
 ## [1.1.0] - 2026-03-01
 
 ### Added
@@ -129,6 +153,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 32-bit word order support (ABCD, CDAB, BADC, DCBA)
 - Signed scale factor support for SunSpec
 
+[2.0.0]: https://github.com/flottokarotto/AdaModbus/releases/tag/v2.0.0
 [1.1.0]: https://github.com/flottokarotto/AdaModbus/releases/tag/v1.1.0
 [1.0.1]: https://github.com/flottokarotto/AdaModbus/releases/tag/v1.0.1
 [1.0.0]: https://github.com/flottokarotto/AdaModbus/releases/tag/v1.0.0
