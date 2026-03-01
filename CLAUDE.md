@@ -76,14 +76,17 @@ Der Protokoll-Kern ist SPARK-kompatibel für formale Verifikation.
 ├─────────────────────────────────────────────────┤
 │  Slave_Generic, Slave_Stubs, Record_IO (SPARK)  │  ← Formal Subprograms
 ├─────────────────────────────────────────────────┤
+│  Scaled_IO (SPARK)                              │  ← Deklaratives Mapping
+│    Register → Float Record via Scaling          │
+├─────────────────────────────────────────────────┤
 │  Protocol Core (SPARK)                          │  ← Verifiziert
 │    Protocol, Protocol.RTU/ASCII/TCP             │
 ├─────────────────────────────────────────────────┤
 │  Energy (SPARK)                                 │  ← Verifiziert
 │    SunSpec, SG_Ready, Grid_Control              │
 ├─────────────────────────────────────────────────┤
-│  Utilities (SPARK)                              │  ← Pure Functions
-│    CRC16, LRC, Utilities                        │
+│  Scaling + Utilities (SPARK)                    │  ← Pure Functions
+│    Scaling, CRC16, LRC, Utilities               │
 ├─────────────────────────────────────────────────┤
 │  Base Types (SPARK)                             │  ← Pure
 │    Ada_Modbus                                   │
@@ -122,6 +125,8 @@ Alle mit `SPARK_Mode => On`:
 | `Ada_Modbus.Energy.Kostal` | Kostal Inverter Profil | ✅ Flow + Proof |
 | `Ada_Modbus.Energy.KSEM` | Kostal Smart Energy Meter | ✅ Flow + Proof |
 | `Ada_Modbus.Gateway` | TCP↔RTU Protokollumsetzung | ✅ Flow + Proof |
+| `Ada_Modbus.Scaling` | Register-Skalierung (SF, Factor, Affine) | ✅ Flow + Proof |
+| `Ada_Modbus.Scaled_IO` | Deklaratives Register→Float Mapping | ✅ Flow (Generic) |
 | `Ada_Modbus.Record_IO` | Record↔Register Mapping | ✅ Flow (Generic) |
 
 ### Non-SPARK Packages
@@ -385,11 +390,11 @@ Non-SPARK Code (Transport, C-API, Master, Slave) behält Runtime-Checks im Relea
 
 | Kategorie | Anzahl | Prozent |
 |-----------|--------|---------|
-| Flow-Analyse | 354 | 30% |
-| Provers (CVC5/Z3) | 816 | 69% |
-| Justified | 7 | 1% |
+| Flow-Analyse | 349 | 30% |
+| Provers (CVC5/Z3) | 829 | 70% |
+| Justified | 2 | 0% |
 | Unbewiesen | 0 | 0% |
-| **Gesamt** | **1177** | **100%** |
+| **Gesamt** | **1180** | **100%** |
 
 - **Flow-Analyse**: ✅ Bestanden - Keine uninitialisierten Variablen
 - **Proof-Analyse**: ✅ 100% bewiesen mit Preconditions und Loop-Invarianten
@@ -829,6 +834,9 @@ Ada_Modbus                         -- Haupt-Package, gemeinsame Typen
 │       ├── Ada_Modbus.Energy.SunSpec.Settings  -- Model 121: Konfiguration
 │       ├── Ada_Modbus.Energy.SunSpec.Battery   -- Model 802: Batterie erweitert
 │       └── Ada_Modbus.Energy.SunSpec.DER      -- Models 701, 704: DER Messungen/Steuerung
+├── Ada_Modbus.Scaling             -- Register-Skalierung (SPARK)
+├── Ada_Modbus.Scaled_IO           -- Deklaratives Register→Float Mapping (SPARK)
+├── Ada_Modbus.Record_IO           -- Binäres Record↔Register Mapping (SPARK)
 ├── Ada_Modbus.Gateway              -- TCP↔RTU Protokollumsetzung
 └── Ada_Modbus.C_API               -- C-Bindings
 ```
@@ -948,6 +956,117 @@ bin/go_e_dashboard 192.168.1.50
 
 **Hinweis:** Modbus TCP muss in der go-e App aktiviert werden!
 
+## Register Mapping (Drei-Ebenen-Architektur)
+
+Drei Abstraktionsebenen für Register↔Wert-Mapping, je nach Bedarf wählbar:
+
+```
+┌─────────────────────────────────────────────────┐
+│  Scaled_IO (Deklarativ)                         │  ← Float-Record + Deskriptoren
+│    Register_Array → Scaled Float Record          │
+├─────────────────────────────────────────────────┤
+│  Scaling (Toolkit)                              │  ← Einzelwert-Funktionen
+│    SF, Factor, Affine, U16/S16/U32              │
+├─────────────────────────────────────────────────┤
+│  Record_IO (Binär)                              │  ← Repräsentationsklausel
+│    Register_Array ↔ Ada Record (bit-exact)      │
+└─────────────────────────────────────────────────┘
+```
+
+### Scaling (Ada_Modbus.Scaling)
+
+SPARK-verifiziertes Toolkit für Register-Wert-Skalierung. Wird auch von SunSpec intern verwendet.
+
+```ada
+with Ada_Modbus.Scaling; use Ada_Modbus.Scaling;
+
+--  SunSpec Scale Factor: value * 10^SF
+Watts := Apply_Signed (Raw_Reg, SF => -1);  --  3456 * 0.1 = 345.6
+
+--  Linearer Faktor: value * (Nominal / Full_Scale)
+Temp := Scale (Raw_Reg, Factor => 0.1);  --  250 * 0.1 = 25.0
+
+--  Affine: value * Factor + Offset
+Celsius := Affine (Raw_Reg, Factor => 0.01, Offset => -273.15);
+
+--  32-Bit Werte (zwei Register)
+Energy := Apply_U32 (Hi_Reg, Lo_Reg, SF => 0);
+```
+
+**Skalierungsarten:**
+
+| Funktion | Formel | Anwendung |
+|----------|--------|-----------|
+| `Apply` / `Apply_Signed` | `value * 10^SF` | SunSpec, Geräte mit Scale Factor |
+| `Apply_U32` | `(hi<<16 + lo) * 10^SF` | SunSpec Energiezähler (acc32) |
+| `Scale` / `Scale_Signed` | `value * Factor` | Lineare Sensoren, Normierung |
+| `Scale_U32` | `(hi<<16 + lo) * Factor` | 32-Bit lineare Werte |
+| `Affine` / `Affine_Signed` | `value * Factor + Offset` | Temperatur, Offset-Sensoren |
+
+### Scaled_IO (Ada_Modbus.Scaled_IO)
+
+Deklaratives One-Shot-Mapping: Register-Array → Float-Record in einem Aufruf.
+
+```ada
+--  1. Float-Record definieren (nur die gewünschten Felder)
+type Meter_Data is record
+   Total_Power : Float;  --  W
+   Voltage_LN  : Float;  --  V
+   Frequency   : Float;  --  Hz
+end record;
+
+--  2. Generisches Package instanziieren
+package Meter_IO is new Ada_Modbus.Scaled_IO (Meter_Data);
+use Meter_IO;
+
+--  3. Feld-Deskriptoren: Register-Index + Skalierungsart
+Fields : constant Field_Descriptors :=
+  [(Reg => 16, Kind => SF_S16, SF_Reg => 20, others => <>),  --  Power
+   (Reg =>  5, Kind => SF_U16, SF_Reg => 13, others => <>),  --  Voltage
+   (Reg => 14, Kind => SF_U16, SF_Reg => 15, others => <>)]; --  Frequency
+
+--  4. One-Liner: Register → physikalische Werte
+Data : Meter_Data := Meter_IO.From_Registers (Raw_Regs, Fields);
+```
+
+**Scale_Kind Optionen:**
+
+| Kind | Quelle | Skalierung |
+|------|--------|------------|
+| `Raw_U16` / `Raw_S16` / `Raw_U32` | Register direkt | `Float(value)` |
+| `SF_U16` / `SF_S16` / `SF_U32` | Register + SF-Register | `value * 10^SF` |
+| `Factor_U16` / `Factor_S16` / `Factor_U32` | Register + Faktor | `value * Factor` |
+| `Affine_U16` / `Affine_S16` | Register + Faktor + Offset | `value * Factor + Offset` |
+
+### Record_IO (Ada_Modbus.Record_IO)
+
+Niedrigste Ebene: bit-exaktes Mapping via Ada-Repräsentationsklausel.
+
+```ada
+--  Record mit Repräsentationsklausel (binäres Layout)
+type Raw_Meter is record
+   Current_A : Interfaces.Integer_16;
+   Voltage_V : Interfaces.Unsigned_16;
+end record
+  with Size => 32;
+for Raw_Meter use record
+   Current_A at 0 range  0 .. 15;
+   Voltage_V at 0 range 16 .. 31;
+end record;
+
+package Raw_IO is new Ada_Modbus.Record_IO (Raw_Meter);
+Raw : Raw_Meter := Raw_IO.From_Registers (Regs);
+--  Manuelle Skalierung danach: Float(Raw.Current_A) * 0.1
+```
+
+### Vergleich der Ebenen
+
+| Ebene | Skalierung | Record-Typ | Anwendung |
+|-------|-----------|------------|-----------|
+| **Scaled_IO** | Automatisch (deklarativ) | Nur Float-Felder | SunSpec, komplexe Geräte |
+| **Scaling** | Manuell pro Wert | Kein Record | Einzelwerte, eigene Logik |
+| **Record_IO** | Keine (roh) | Beliebig (repr. clause) | Binäres Protokoll, Embedded |
+
 ## Verzeichnisstruktur
 
 ```
@@ -1031,7 +1150,7 @@ tests/
 └── aunit_tests.gpr              -- GPR für Tests
 ```
 
-**236 Unit-Tests** für alle Funktionscodes und Protokollschichten.
+**257 Unit-Tests** für alle Funktionscodes und Protokollschichten.
 
 ### Beispielprogramme
 
@@ -1056,6 +1175,7 @@ alr exec -- gprbuild -P examples/examples.gpr
 | `data_logger` | Register-Werte loggen |
 | `kostal_dashboard` / `kostal_reader` | Kostal Inverter Dashboard/Reader |
 | `ksem_dashboard` / `ksem_reader` | Kostal Smart Energy Meter |
+| `ksem_record_io` / `ksem_scaled_io` | KSEM mit Record_IO / Scaled_IO |
 | `go_e_dashboard` / `go_e_simulator` | go-e Charger Wallbox |
 | `terminal_dashboard` | Terminal-basiertes Dashboard |
 

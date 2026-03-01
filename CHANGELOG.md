@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-03-01
+
+### Added
+
+#### Register Mapping (Three-Level Architecture)
+- `Ada_Modbus.Scaling` — SPARK-verified scaling toolkit (SF, Factor, Affine)
+- `Ada_Modbus.Scaled_IO` — Declarative register-to-Float record mapping (generic)
+- `Ada_Modbus.Record_IO` — Binary record↔register mapping with SPARK_Mode
+  - 32-bit word order support for Float32/U32 fields
+  - Field_Sizes API for querying field sizes at runtime
+
+#### Energy Devices
+- `Ada_Modbus.Energy.Delta_Charger` — Delta AC Max Basic wallbox support
+- `Ada_Modbus.Gateway` — TCP↔RTU protocol translation
+- `Ada_Modbus.Energy.Kostal` / `Ada_Modbus.Energy.KSEM` as library packages
+
+#### Transport
+- `Ada_Modbus.Transport.TLS_Mbed` — mbedTLS transport for embedded (Cortex-M)
+- IEEE Float32 support in Utilities (endian-portable record overlays)
+
+#### Embedded (NUCLEO-H753ZI)
+- ST HAL Ethernet replacing bare-metal (svd2ada instead of a0b SVD)
+- Shared components: semihosting, last chance handler, LwIP bindings, TCP client
+- NUCLEO-H743ZI2 support with improved crash diagnostics
+- STM32CubeH7 submodule pinned to v1.12.1
+
+#### Examples
+- `ksem_record_io` — KSEM reading via Record_IO (binary mapping)
+- `ksem_scaled_io` — KSEM reading via Scaled_IO (declarative mapping)
+
+### Fixed
+- ETH RX HardFault and KSEM scale factor handling
+- Off-by-one in KSEM SunSpec base address (40069→40070)
+- LwIP TCP stability: PCB leak, keepalive, critical sections
+- TCP reconnect: tear down connection on send/receive failure
+- gnatprove overflow warnings in Gateway, Delta_Charger, Protocol
+
+### Changed
+- SunSpec now delegates scaling to `Ada_Modbus.Scaling` (5 justified checks eliminated)
+- Scaling functions proven via preconditions instead of Annotate pragmas
+- SPARK verification: 1180 checks, 0 unproved, 2 justified (was 1177/7)
+- 257 unit tests (was 214), test coverage 96%+
+- CI optimized with parallel jobs
+- Documentation rewritten
+
 ## [1.0.1] - 2026-01-27
 
 ### Fixed
@@ -84,5 +129,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 32-bit word order support (ABCD, CDAB, BADC, DCBA)
 - Signed scale factor support for SunSpec
 
+[1.1.0]: https://github.com/flottokarotto/AdaModbus/releases/tag/v1.1.0
 [1.0.1]: https://github.com/flottokarotto/AdaModbus/releases/tag/v1.0.1
 [1.0.0]: https://github.com/flottokarotto/AdaModbus/releases/tag/v1.0.0
