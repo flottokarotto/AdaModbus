@@ -16,7 +16,8 @@ project Examples is
                   "ksem_reader.adb", "kostal_dashboard.adb",
                   "ksem_dashboard.adb", "go_e_dashboard.adb",
                  "go_e_simulator.adb",
-                 "ksem_record_io.adb");
+                 "ksem_record_io.adb",
+                 "ksem_scaled_io.adb");
 
    package Compiler is
       --  Inherit common switches from main library, plus debug flags:
